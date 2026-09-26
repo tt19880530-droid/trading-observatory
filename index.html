@@ -61,7 +61,7 @@ h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .chip{padding:4px 9px;border-radius:9px;background:var(--panel2);font-size:12px;font-weight:600}
 .bars{margin-top:10px;display:grid;gap:6px}
-.bar{display:grid;grid-template-columns:52px 1fr 64px;align-items:center;gap:8px;font-size:12px}
+.bar{display:grid;grid-template-columns:52px 1fr 84px;align-items:center;gap:8px;font-size:12px}
 .bar .track{position:relative;height:8px;background:var(--panel2);border-radius:6px;overflow:hidden}
 .bar .fill{position:absolute;top:0;bottom:0;border-radius:6px}
 .bar .zero{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--line)}
@@ -137,9 +137,9 @@ input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--lin
 
   <h2>戦略のしくみ</h2>
   <section class="card rules">
-    <details><summary>GMO 暗号資産トレンド</summary><p>BTC・ETH・XRP の現物を口座の55%まで保有（2026/9/26にLTC・BCHを外し主要3銘柄に集中）。4時間足で「14日前より高いか」「30日前より高いか」を30分ごとに判定し、両方上なら満額＋同額のレバレッジ買いを上乗せ、片方なら半分、両方下なら売却。証拠金維持率115%割れで上乗せを全決済。</p></details>
+    <details><summary>GMO 暗号資産トレンド</summary><p>BTC・ETH・XRP の現物を口座の55%まで保有（2026/9/26にLTC・BCHを外し主要3銘柄に集中）。4時間足で「14日前より高いか」「30日前より高いか」を30分ごとに判定し、両方上なら満額＋口座の40%分のレバレッジ買いを上乗せ、片方なら半分、両方下なら売却。証拠金維持率115%割れで上乗せを全決済。</p></details>
     <details><summary>急騰追随</summary><p>BTC・ETH・XRPで、確定した1時間足の上昇が過去30日の標準偏差の2.5倍を超えたら、口座の15%をレバレッジで買い、12時間後に決済。</p></details>
-    <details><summary>現物⇄レバレッジ 価格差</summary><p>GMOの現物とレバレッジの約定可能な価格差が20bpを超えたら、安い方を買い高い方を売る。差が縮んだら両方を決済（最長3日）。対象はBTC・ETH・XRP・LTC・BCH・DOGE・SOL・ADA・SUI・LINK。1回2万円、同時に最大2銘柄。相場の上げ下げに左右されない。</p></details>
+    <details><summary>現物⇄レバレッジ 価格差</summary><p>GMOの現物とレバレッジの約定可能な価格差が20bpを超えたら、安い方を買い高い方を売る。差が縮んだら両方を決済（最長3日）。対象はBTC・ETH・XRP・LTC・BCH・DOGE・SOL・ADA・SUI・LINK。1回3万円、同時に最大3件。相場の上げ下げに左右されない。</p></details>
     <details><summary>Saxo ナスダック3倍＋金</summary><p>ナスダック100が200日移動平均より上ならTQQQ（3倍ETF）を70%、下なら売って現金。金（GLDM）は常に30%。米国市場の取引時間中のみ発注。</p></details>
   </section>
 </div>
@@ -299,11 +299,13 @@ input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--lin
     const bar = (v) => {
       if (v == null) return '<div class="track"></div>';
       const x = Math.max(-scale, Math.min(scale, v)), left = 50 + Math.min(0, x) / scale * 50, width = Math.abs(x) / scale * 50;
-      return `<div class="track"><div class="zero" style="left:50%"></div><div class="th" style="left:${50 + TH / scale * 50}%"></div><div class="fill" style="left:${left}%;width:${width}%;background:${v >= TH ? "var(--pos)" : "var(--c3)"}"></div></div>`;
+      const color = v >= TH ? "var(--pos)" : v > 0 ? "var(--c3)" : "var(--line)";
+      return `<div class="track"><div class="zero" style="left:50%"></div><div class="th" style="left:${50 + TH / scale * 50}%"></div><div class="fill" style="left:${left}%;width:${width}%;background:${color}"></div></div>`;
     };
     for (const k of coins) {
       const best = Math.max(f[k] ?? -1e9, r[k] ?? -1e9);
-      rows.push(`<div class="bar"><span>${esc(k)}</span>${bar(best)}<span class="${best >= TH ? "pos" : "muted"}" style="text-align:right">${best > -1e8 ? best.toFixed(1) : "—"} bp</span></div>`);
+      const label = best <= -1e8 ? "—" : best >= TH ? `${best.toFixed(1)} bp 建玉可` : best > 0 ? `${best.toFixed(1)} bp` : "機会なし";
+      rows.push(`<div class="bar"><span>${esc(k)}</span>${bar(best)}<span class="${best >= TH ? "pos" : "muted"}" style="text-align:right;font-size:11px">${label}</span></div>`);
     }
     const open = [...Object.entries(a.open_forward || {}).map(([k, p]) => `順 ${esc(k)} ${p.entry_bps?.toFixed?.(1) ?? ""}bp`),
                   ...Object.entries(a.open_reverse || {}).map(([k, p]) => `逆 ${esc(k)} ${p.entry_bps?.toFixed?.(1) ?? ""}bp`)];
@@ -312,7 +314,7 @@ input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--lin
     $("laneArb").innerHTML = `
       <div class="lane-head"><div class="t">GMO 現物⇄レバレッジ 価格差</div><div class="v" style="font-size:15px">${open.length ? open.length + "件 建玉中" : '<span class="muted">待機中</span>'}</div></div>
       <div class="kv"><div class="k">決済済み</div><div class="v">${closes.length} 回</div><div class="k">推定損益の合計</div><div class="v ${cls(arbPnl)}">${closes.length ? signed(arbPnl) : "—"}</div></div>
-      <div class="note">各銘柄の「取れる価格差」（順・逆の大きい方）。黄色の線 = 20bp の建玉基準。</div>
+      <div class="note">各銘柄で今取引した場合の利ざや（順・逆の良い方、スプレッド込み）。黄色の線 = 20bp の建玉基準。マイナスは取引すると損をする状態で、「機会なし」と表示。</div>
       <div class="bars">${rows.join("") || '<div class="empty">データなし</div>'}</div>
       ${open.length ? `<div class="chips">${open.map((o) => `<span class="chip">${o}</span>`).join("")}</div>` : ""}`;
   }
