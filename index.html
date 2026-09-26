@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trading Observatory</title>
+<meta name="theme-color" content="#0b0f14">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#0b0f14;--panel:#121821;--panel2:#18202b;--line:#233042;--text:#e6edf5;--muted:#8a9bb0;
+  --accent:#5eead4;--pos:#34d399;--neg:#f87171;--warn:#fbbf24;--c1:#5eead4;--c2:#a78bfa;--c3:#60a5fa;
+  --radius:16px;--gap:14px;color-scheme:dark;
+  --sans:"IBM Plex Sans JP",-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){color-scheme:light;
+  --bg:#f4f6f8;--panel:#ffffff;--panel2:#eef2f6;--line:#dbe2ea;--text:#0e1726;--muted:#586a80;
+  --accent:#0f8f82;--pos:#08875f;--neg:#c2362f;--warn:#a35d06;--c1:#0f8f82;--c2:#6d4bd6;--c3:#2563c9;}}
+:root[data-theme="light"]{color-scheme:light;
+  --bg:#f4f6f8;--panel:#ffffff;--panel2:#eef2f6;--line:#dbe2ea;--text:#0e1726;--muted:#586a80;
+  --accent:#0f8f82;--pos:#08875f;--neg:#c2362f;--warn:#a35d06;--c1:#0f8f82;--c2:#6d4bd6;--c3:#2563c9;}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:980px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 16px 96px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.02em}
+.brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent)}
+.brand small{display:block;color:var(--muted);font-weight:500;font-size:12px}
+.btn{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:12px;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer}
+.btn:active{transform:scale(.98)} .btn:focus-visible,.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);color:#04201c;border-color:transparent;font-weight:700}
+.status{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;margin:-6px 0 14px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--panel2)}
+.pill.ok{color:var(--pos)} .pill.warn{color:var(--warn)} .pill.bad{color:var(--neg)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.hero .label{color:var(--muted);font-size:13px}
+.hero .big{font-family:var(--mono);font-size:36px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:2px 0 10px}
+.deltas{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.delta{background:var(--panel2);border-radius:12px;padding:8px 10px}
+.delta .k{color:var(--muted);font-size:11px}
+.delta .v{font-family:var(--mono);font-weight:600;font-size:13px;font-variant-numeric:tabular-nums}
+.pos{color:var(--pos)} .neg{color:var(--neg)} .muted{color:var(--muted)} .warn{color:var(--warn)}
+.grid{display:grid;gap:var(--gap);margin-top:var(--gap)}
+@media(min-width:760px){.grid.two{grid-template-columns:1fr 1fr}}
+h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:26px 0 10px}
+.tabs{display:flex;gap:6px;background:var(--panel2);padding:4px;border-radius:12px;width:max-content}
+.tabs button{border:0;background:transparent;color:var(--muted);padding:6px 12px;border-radius:9px;font:inherit;font-size:13px;cursor:pointer}
+.tabs button.on{background:var(--panel);color:var(--text);box-shadow:0 1px 0 var(--line)}
+.chart{position:relative;margin-top:10px}
+.chart svg{width:100%;height:220px;display:block;touch-action:pan-y}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.tip{position:absolute;pointer-events:none;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 9px;font-size:12px;white-space:nowrap;transform:translate(-50%,-110%);display:none}
+.lane-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.lane-head .t{font-weight:700}
+.lane-head .v{font-family:var(--mono);font-weight:600;font-size:19px;font-variant-numeric:tabular-nums}
+.kv{display:grid;grid-template-columns:1fr auto;gap:4px 12px;margin-top:10px;font-size:13px}
+.kv .k{color:var(--muted)} .kv .v{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{padding:4px 9px;border-radius:9px;background:var(--panel2);font-size:12px;font-weight:600}
+.bars{margin-top:10px;display:grid;gap:6px}
+.bar{display:grid;grid-template-columns:52px 1fr 64px;align-items:center;gap:8px;font-size:12px}
+.bar .track{position:relative;height:8px;background:var(--panel2);border-radius:6px;overflow:hidden}
+.bar .fill{position:absolute;top:0;bottom:0;border-radius:6px}
+.bar .zero{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--line)}
+.bar .th{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--warn)}
+.gauge{height:8px;background:var(--panel2);border-radius:6px;overflow:hidden;margin-top:4px}
+.gauge div{height:100%;border-radius:6px}
+.events{display:grid;gap:8px}
+.ev{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--panel2);font-size:13px}
+.ev .ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:14px;background:var(--panel)}
+.ev .sub{color:var(--muted);font-size:11px}
+.ev .amt{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+.health{display:grid;gap:8px}
+.hrow{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:8px 0;border-bottom:1px solid var(--line)}
+.hrow:last-child{border-bottom:0}
+.empty{color:var(--muted);font-size:13px;padding:12px 0;text-align:center}
+.rules{display:grid;gap:2px}
+details{border-bottom:1px solid var(--line);padding:10px 0}
+details:last-child{border-bottom:0}
+summary{cursor:pointer;font-weight:700;font-size:14px}
+details p{margin:8px 0 2px;color:var(--muted);font-size:13px;max-width:65ch}
+dialog{border:1px solid var(--line);border-radius:18px;background:var(--panel);color:var(--text);padding:18px;width:min(460px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.55)}
+label{display:block;font-size:12px;color:var(--muted);margin:12px 0 4px}
+input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font:inherit}
+.note{font-size:12px;color:var(--muted);margin-top:10px}
+.row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="dot"></span><div>Trading Observatory<small>GMO暗号資産 ・ Saxo ・ 価格差</small></div></div>
+    <div style="display:flex;gap:8px"><button class="btn" id="refresh">更新</button><button class="btn" id="settingsBtn">設定</button></div>
+  </header>
+  <div class="status"><span id="freshPill" class="pill">未接続</span><span id="fetchedAt"></span></div>
+
+  <section class="card hero">
+    <div class="label">合計評価額</div>
+    <div class="big" id="total">—</div>
+    <div class="deltas">
+      <div class="delta"><div class="k">24時間</div><div class="v" id="d24">—</div></div>
+      <div class="delta"><div class="k">7日</div><div class="v" id="d7">—</div></div>
+      <div class="delta"><div class="k">記録開始から</div><div class="v" id="dAll">—</div></div>
+    </div>
+  </section>
+
+  <h2>評価額の推移</h2>
+  <section class="card">
+    <div class="tabs" id="rangeTabs">
+      <button data-r="1">24時間</button><button data-r="7" class="on">7日</button><button data-r="30">30日</button><button data-r="0">全期間</button>
+    </div>
+    <div class="chart"><svg id="chart"></svg><div class="tip" id="tip"></div></div>
+    <div class="legend"><span><i style="background:var(--c1)"></i>合計</span><span><i style="background:var(--c3)"></i>GMO暗号</span><span><i style="background:var(--c2)"></i>Saxo</span></div>
+  </section>
+
+  <h2>戦略</h2>
+  <div class="grid two">
+    <section class="card" id="laneCrypto"></section>
+    <section class="card" id="laneSaxo"></section>
+  </div>
+  <div class="grid"><section class="card" id="laneArb"></section></div>
+
+  <h2>取引・イベント</h2>
+  <section class="card">
+    <div class="tabs" id="evTabs">
+      <button data-l="" class="on">すべて</button><button data-l="gmo_crypto_trend">暗号トレンド</button><button data-l="gmo_basis_arb">価格差</button><button data-l="saxo_etf_trend">Saxo</button>
+    </div>
+    <div class="events" id="events" style="margin-top:12px"></div>
+  </section>
+
+  <h2>稼働状況</h2>
+  <section class="card health" id="health"></section>
+
+  <h2>戦略のしくみ</h2>
+  <section class="card rules">
+    <details><summary>GMO 暗号資産トレンド</summary><p>BTC・ETH・XRP・LTC・BCH の現物を口座の55%まで保有。4時間足で「14日前より高いか」「30日前より高いか」を30分ごとに判定し、両方上なら満額＋同額のレバレッジ買いを上乗せ、片方なら半分、両方下なら売却。証拠金維持率115%割れで上乗せを全決済。</p></details>
+    <details><summary>急騰追随</summary><p>BTC・ETH・XRPで、確定した1時間足の上昇が過去30日の標準偏差の2.5倍を超えたら、口座の15%をレバレッジで買い、12時間後に決済。</p></details>
+    <details><summary>現物⇄レバレッジ 価格差</summary><p>GMOの現物とレバレッジの約定可能な価格差が20bpを超えたら、安い方を買い高い方を売る。差が縮んだら両方を決済（最長3日）。1回2万円、同時に最大2銘柄。相場の上げ下げに左右されない。</p></details>
+    <details><summary>Saxo ナスダック3倍＋金</summary><p>ナスダック100が200日移動平均より上ならTQQQ（3倍ETF）を70%、下なら売って現金。金（GLDM）は常に30%。米国市場の取引時間中のみ発注。</p></details>
+  </section>
+</div>
+
+<dialog id="settings">
+  <div style="font-weight:700;font-size:16px">接続設定</div>
+  <label>GitHub トークン（Contents: 読み取りのみ）</label><input id="sToken" type="password" autocomplete="off">
+  <label>リポジトリ</label><input id="sRepo">
+  <label>ブランチ</label><input id="sBranch">
+  <div class="note">トークンはこの端末のブラウザ内にだけ保存されます。fine-grained トークンで対象リポジトリの Contents を Read-only にしてください。</div>
+  <div class="row"><button class="btn" id="sCancel">閉じる</button><button class="btn primary" id="sSave">保存して接続</button></div>
+</dialog>
+
+<script>
+(() => {
+  const FEED_PATH = "feed/observatory_v2.json";
+  const store = {
+    get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  };
+  const cfg = () => ({
+    token: store.get("obs.token", ""),
+    repo: store.get("obs.repo", "tt19880530-droid/fx_alert"),
+    branch: store.get("obs.branch", "observatory-data"),
+  });
+  const $ = (id) => document.getElementById(id);
+  const yen = (v) => v == null || isNaN(v) ? "—" : "¥" + Math.round(v).toLocaleString("ja-JP");
+  const signed = (v) => v == null || isNaN(v) ? "—" : (v >= 0 ? "+" : "−") + "¥" + Math.abs(Math.round(v)).toLocaleString("ja-JP");
+  const pct = (v) => v == null || !isFinite(v) ? "" : ` (${v >= 0 ? "+" : ""}${(v * 100).toFixed(1)}%)`;
+  const cls = (v) => v > 0 ? "pos" : v < 0 ? "neg" : "muted";
+  const jst = (s) => s ? new Date(s).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+  const ageMin = (s) => s ? (Date.now() - new Date(s).getTime()) / 60000 : Infinity;
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  let feed = null, range = 7, evLane = "";
+
+  async function load() {
+    const c = cfg();
+    if (!c.token) { $("freshPill").className = "pill warn"; $("freshPill").textContent = "トークン未設定"; return; }
+    try {
+      const r = await fetch(`https://api.github.com/repos/${c.repo}/contents/${FEED_PATH}?ref=${encodeURIComponent(c.branch)}&t=${Date.now()}`,
+        { headers: { Authorization: `Bearer ${c.token}`, Accept: "application/vnd.github.raw+json" }, cache: "no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      feed = await r.json();
+      $("fetchedAt").textContent = "取得 " + new Date().toLocaleTimeString("ja-JP", { timeZone: "Asia/Tokyo" });
+      render();
+    } catch (e) {
+      $("freshPill").className = "pill bad"; $("freshPill").textContent = "取得失敗: " + e.message;
+    }
+  }
+
+  function changeSince(hist, hours) {
+    if (!hist.length) return null;
+    const last = hist[hist.length - 1];
+    const cutoff = hours ? new Date(last.t).getTime() - hours * 3600e3 : -Infinity;
+    const base = hours ? hist.find((h) => new Date(h.t).getTime() >= cutoff) : hist[0];
+    if (!base || base === last && hours) return null;
+    return { d: last.total - base.total, p: base.total ? (last.total - base.total) / base.total : null };
+  }
+
+  function render() {
+    const f = feed, hist = f.equity_history || [];
+    const age = ageMin(f.generated_at);
+    const p = $("freshPill");
+    p.className = "pill " + (age < 90 ? "ok" : age < 240 ? "warn" : "bad");
+    p.textContent = age < 90 ? "最新" : `データが${Math.round(age / 60)}時間前`;
+    $("total").textContent = yen(f.total_equity_jpy);
+    [["d24", 24], ["d7", 168], ["dAll", 0]].forEach(([id, h]) => {
+      const c = changeSince(hist, h), el = $(id);
+      el.className = "v " + (c ? cls(c.d) : "muted");
+      el.textContent = c ? signed(c.d) + pct(c.p) : "—";
+    });
+    drawChart(hist);
+    renderCrypto(f.lanes.gmo_crypto_trend || {});
+    renderSaxo(f.lanes.saxo_etf_trend || {});
+    renderArb(f.lanes.gmo_basis_arb || {});
+    renderEvents(f.events || []);
+    renderHealth(f);
+  }
+
+  function drawChart(hist) {
+    const svg = $("chart"), W = svg.clientWidth || 600, H = 220, P = { l: 8, r: 8, t: 12, b: 22 };
+    const end = hist.length ? new Date(hist[hist.length - 1].t).getTime() : Date.now();
+    const pts = range ? hist.filter((h) => new Date(h.t).getTime() >= end - range * 86400e3) : hist;
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    if (pts.length < 2) { svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" fill="currentColor" opacity=".5" font-size="13">データがたまるとグラフが表示されます</text>`; return; }
+    const xs = pts.map((h) => new Date(h.t).getTime()), x0 = xs[0], x1 = xs[xs.length - 1];
+    const series = [["total", "var(--c1)", 2.2], ["gmo_crypto", "var(--c3)", 1.5], ["saxo", "var(--c2)", 1.5]];
+    const all = pts.flatMap((h) => series.map(([k]) => h[k]).filter((v) => v != null));
+    let lo = Math.min(...all), hi = Math.max(...all); const pad = (hi - lo) * 0.08 || hi * 0.01 || 1; lo -= pad; hi += pad;
+    const X = (t) => P.l + (t - x0) / (x1 - x0 || 1) * (W - P.l - P.r);
+    const Y = (v) => P.t + (1 - (v - lo) / (hi - lo)) * (H - P.t - P.b);
+    let g = "";
+    for (let i = 0; i <= 3; i++) { const v = lo + (hi - lo) * i / 3, y = Y(v); g += `<line x1="${P.l}" x2="${W - P.r}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-width="1"/><text x="${W - P.r}" y="${y - 4}" text-anchor="end" font-size="10" fill="var(--muted)">${Math.round(v / 1000).toLocaleString()}k</text>`; }
+    for (const [k, c, w] of series) {
+      const d = pts.map((h, i) => h[k] == null ? "" : `${i ? "L" : "M"}${X(xs[i]).toFixed(1)},${Y(h[k]).toFixed(1)}`).join("");
+      g += `<path d="${d}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"/>`;
+    }
+    g += `<line id="cursor" y1="${P.t}" y2="${H - P.b}" stroke="var(--muted)" stroke-dasharray="3 3" visibility="hidden"/>`;
+    g += `<text x="${P.l}" y="${H - 6}" font-size="10" fill="var(--muted)">${jst(pts[0].t)}</text><text x="${W - P.r}" y="${H - 6}" text-anchor="end" font-size="10" fill="var(--muted)">${jst(pts[pts.length - 1].t)}</text>`;
+    svg.innerHTML = g;
+    const tip = $("tip"), cur = svg.querySelector("#cursor");
+    const move = (ev) => {
+      const rect = svg.getBoundingClientRect(), cx = ((ev.touches ? ev.touches[0].clientX : ev.clientX) - rect.left) * W / rect.width;
+      let best = 0; xs.forEach((t, i) => { if (Math.abs(X(t) - cx) < Math.abs(X(xs[best]) - cx)) best = i; });
+      const h = pts[best], px = X(xs[best]);
+      cur.setAttribute("x1", px); cur.setAttribute("x2", px); cur.setAttribute("visibility", "visible");
+      tip.style.display = "block"; tip.style.left = (px * rect.width / W) + "px"; tip.style.top = (Y(h.total) * rect.height / H) + "px";
+      tip.innerHTML = `${jst(h.t)}<br><b>${yen(h.total)}</b> <span class="muted">GMO ${yen(h.gmo_crypto)} / Saxo ${yen(h.saxo)}</span>`;
+    };
+    const hide = () => { tip.style.display = "none"; cur.setAttribute("visibility", "hidden"); };
+    svg.onmousemove = move; svg.ontouchstart = move; svg.ontouchmove = move; svg.onmouseleave = hide; svg.ontouchend = hide;
+  }
+
+  function laneDelta(key) {
+    const h = (feed.equity_history || []).filter((x) => x[key] != null);
+    if (h.length < 2) return "";
+    const d = h[h.length - 1][key] - h[0][key];
+    return `<div class="sub ${cls(d)}" style="text-align:right;font-family:var(--mono);font-size:12px">${signed(d)}${pct(h[0][key] ? d / h[0][key] : null)} 記録開始から</div>`;
+  }
+  const arrow = (v) => v === 1 ? '<span class="pos">▲</span>' : v === 0.5 ? '<span class="warn">▶</span>' : '<span class="neg">▼</span>';
+  const sum = (o) => Object.values(o || {}).reduce((a, b) => a + (b || 0), 0);
+
+  function renderCrypto(c) {
+    const mr = c.margin_ratio, mrPct = mr ? Math.min(mr / 3, 1) : 0;
+    const mrColor = !mr ? "var(--muted)" : mr < 1.4 ? "var(--neg)" : mr < 1.8 ? "var(--warn)" : "var(--pos)";
+    $("laneCrypto").innerHTML = `
+      <div class="lane-head"><div class="t">GMO 暗号資産トレンド</div><div class="v">${yen(c.equity_jpy)}</div></div>${laneDelta("gmo_crypto")}
+      <div class="chips">${Object.entries(c.trend_scores || {}).map(([k, v]) => `<span class="chip">${esc(k)} ${arrow(v)}</span>`).join("") || '<span class="muted">—</span>'}</div>
+      <div class="kv">
+        <div class="k">現物</div><div class="v">${yen(sum(c.spot_jpy))}</div>
+        <div class="k">レバレッジ上乗せ</div><div class="v">${yen(sum(c.overlay_jpy))}</div>
+        <div class="k">急騰追随</div><div class="v">${yen(sum(c.spike_jpy))}</div>
+        <div class="k">証拠金維持率</div><div class="v" style="color:${mrColor}">${mr ? Math.round(mr * 100) + "%" : "—"}</div>
+      </div>
+      <div class="gauge"><div style="width:${mrPct * 100}%;background:${mrColor}"></div></div>
+      <div class="note">▲両トレンド上向き（上乗せあり） ▶片方のみ ▼下向き（売却）</div>`;
+  }
+
+  function renderSaxo(s) {
+    const h = s.holdings || {}, on = s.nasdaq_above_sma200;
+    $("laneSaxo").innerHTML = `
+      <div class="lane-head"><div class="t">Saxo ナスダック3倍＋金</div><div class="v">${yen(s.equity_jpy)}</div></div>${laneDelta("saxo")}
+      <div class="chips"><span class="chip">ナスダック 200日線 ${on === true ? '<span class="pos">上 ▲</span>' : on === false ? '<span class="neg">下 ▼</span>' : "—"}</span></div>
+      <div class="kv">
+        <div class="k">TQQQ（ナスダック3倍）</div><div class="v">${h["TQQQ:xnas"] ?? 0} 株</div>
+        <div class="k">GLDM（金）</div><div class="v">${h["GLDM:arcx"] ?? 0} 株</div>
+        <div class="k">目標配分</div><div class="v">TQQQ 70% / 金 30%</div>
+      </div>
+      <div class="note">200日線を下回るとTQQQを売却して現金化。発注は米国市場時間のみ。</div>`;
+  }
+
+  function renderArb(a) {
+    const TH = 20, rows = [];
+    const f = a.forward_edges_bps || {}, r = a.reverse_edges_bps || {};
+    const coins = [...new Set([...Object.keys(f), ...Object.keys(r)])];
+    const scale = 40;
+    const bar = (v) => {
+      if (v == null) return '<div class="track"></div>';
+      const x = Math.max(-scale, Math.min(scale, v)), left = 50 + Math.min(0, x) / scale * 50, width = Math.abs(x) / scale * 50;
+      return `<div class="track"><div class="zero" style="left:50%"></div><div class="th" style="left:${50 + TH / scale * 50}%"></div><div class="fill" style="left:${left}%;width:${width}%;background:${v >= TH ? "var(--pos)" : "var(--c3)"}"></div></div>`;
+    };
+    for (const k of coins) {
+      const best = Math.max(f[k] ?? -1e9, r[k] ?? -1e9);
+      rows.push(`<div class="bar"><span>${esc(k)}</span>${bar(best)}<span class="${best >= TH ? "pos" : "muted"}" style="text-align:right">${best > -1e8 ? best.toFixed(1) : "—"} bp</span></div>`);
+    }
+    const open = [...Object.entries(a.open_forward || {}).map(([k, p]) => `順 ${esc(k)} ${p.entry_bps?.toFixed?.(1) ?? ""}bp`),
+                  ...Object.entries(a.open_reverse || {}).map(([k, p]) => `逆 ${esc(k)} ${p.entry_bps?.toFixed?.(1) ?? ""}bp`)];
+    const closes = (feed.events || []).filter((e) => e.lane === "gmo_basis_arb" && /CLOSED/.test(e.leg || ""));
+    const arbPnl = closes.reduce((t, e) => t + (e.est_pnl_jpy || 0), 0);
+    $("laneArb").innerHTML = `
+      <div class="lane-head"><div class="t">GMO 現物⇄レバレッジ 価格差</div><div class="v" style="font-size:15px">${open.length ? open.length + "件 建玉中" : '<span class="muted">待機中</span>'}</div></div>
+      <div class="kv"><div class="k">決済済み</div><div class="v">${closes.length} 回</div><div class="k">推定損益の合計</div><div class="v ${cls(arbPnl)}">${closes.length ? signed(arbPnl) : "—"}</div></div>
+      <div class="note">各銘柄の「取れる価格差」（順・逆の大きい方）。黄色の線 = 20bp の建玉基準。</div>
+      <div class="bars">${rows.join("") || '<div class="empty">データなし</div>'}</div>
+      ${open.length ? `<div class="chips">${open.map((o) => `<span class="chip">${o}</span>`).join("")}</div>` : ""}`;
+  }
+
+  const LANE = { gmo_crypto_trend: ["暗号", "₿"], gmo_basis_arb: ["価格差", "⇄"], saxo_etf_trend: ["Saxo", "S"] };
+  function renderEvents(evs) {
+    const list = evs.filter((e) => !evLane || e.lane === evLane).slice().reverse().slice(0, 60);
+    $("events").innerHTML = list.map((e) => {
+      const [ln, ic] = LANE[e.lane] || [e.lane, "•"];
+      const what = e.leg || e.kind || "";
+      const sym = e.symbol || e.coin || "";
+      const failed = e.accepted === false || e.known === false || e.outcome_known === false;
+      const pnl = e.est_pnl_jpy;
+      const amt = pnl != null ? `<span class="${cls(pnl)}">${signed(pnl)}</span>` : e.notional_jpy != null ? yen(e.notional_jpy) : "";
+      const desc = /CLOSED/.test(what) ? "決済" : failed ? "失敗・要確認" : `${what} ${e.side || ""} ${e.size ?? e.amount ?? ""}`;
+      return `<div class="ev"><div class="ic">${ic}</div><div><div>${esc(ln)} ・ ${esc(sym)} ・ <span class="${failed ? "neg" : ""}">${esc(desc)}</span></div><div class="sub">${jst(e.at)}${e.est_pnl_bps != null ? ` ・ ${e.est_pnl_bps}bp` : ""}</div></div><div class="amt">${amt}</div></div>`;
+    }).join("") || '<div class="empty">まだ取引はありません</div>';
+  }
+
+  function renderHealth(f) {
+    const L = f.lanes, rows = [
+      ["GMO 暗号トレンド", L.gmo_crypto_trend, 45], ["Saxo ETF", L.saxo_etf_trend, 45], ["価格差", L.gmo_basis_arb, 5],
+    ];
+    $("health").innerHTML = rows.map(([name, l, maxAge]) => {
+      l = l || {};
+      const age = ageMin(l.updated_at), okStatus = String(l.status || "").startsWith("OK");
+      const blockers = [...(l.blockers || []), ...(l.entry_blockers || [])].filter((b) => !/US_SESSION_CLOSED/.test(b));
+      const state = !okStatus ? ["bad", "エラー"] : age > maxAge ? ["warn", `更新${Math.round(age)}分前`] : blockers.length ? ["warn", "制限あり"] : ["ok", "正常"];
+      return `<div class="hrow"><div>${name}<div class="sub muted" style="font-size:11px">${esc(blockers.join(" / ") || jst(l.updated_at))}</div></div><span class="pill ${state[0]}">${state[1]}</span></div>`;
+    }).join("");
+  }
+
+  document.querySelectorAll("#rangeTabs button").forEach((b) => b.onclick = () => {
+    document.querySelectorAll("#rangeTabs button").forEach((x) => x.classList.toggle("on", x === b));
+    range = +b.dataset.r; if (feed) drawChart(feed.equity_history || []);
+  });
+  document.querySelectorAll("#evTabs button").forEach((b) => b.onclick = () => {
+    document.querySelectorAll("#evTabs button").forEach((x) => x.classList.toggle("on", x === b));
+    evLane = b.dataset.l; if (feed) renderEvents(feed.events || []);
+  });
+  const dlg = $("settings");
+  $("settingsBtn").onclick = () => { const c = cfg(); $("sToken").value = c.token; $("sRepo").value = c.repo; $("sBranch").value = c.branch; dlg.showModal(); };
+  $("sCancel").onclick = () => dlg.close();
+  $("sSave").onclick = () => { store.set("obs.token", $("sToken").value.trim()); store.set("obs.repo", $("sRepo").value.trim()); store.set("obs.branch", $("sBranch").value.trim()); dlg.close(); load(); };
+  $("refresh").onclick = load;
+  window.addEventListener("resize", () => feed && drawChart(feed.equity_history || []));
+  if (window.__OBS_FEED__) { feed = window.__OBS_FEED__; render(); } else { load(); setInterval(load, 60000); }
+})();
+</script>
+</body>
+</html>
