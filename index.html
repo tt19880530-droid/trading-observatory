@@ -293,7 +293,9 @@ input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--lin
 
   function renderArb(a) {
     const TH = 20, rows = [];
-    const f = a.forward_edges_bps || {}, r = a.reverse_edges_bps || {};
+    const f = { ...(a.forward_edges_bps || {}) }, r = a.reverse_edges_bps || {}, cv = a.covered_edges_bps || {};
+    // BTC/ETH/XRP use the trend's own spot (no spot fees, 15 bp): shift onto the common 20 bp scale
+    for (const [k, v] of Object.entries(cv)) f[k] = Math.max(f[k] ?? -1e9, v + 5);
     const coins = [...new Set([...Object.keys(f), ...Object.keys(r)])];
     const scale = 40;
     const bar = (v) => {
@@ -308,13 +310,14 @@ input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--lin
       rows.push(`<div class="bar"><span>${esc(k)}</span>${bar(best)}<span class="${best >= TH ? "pos" : "muted"}" style="text-align:right;font-size:11px">${label}</span></div>`);
     }
     const open = [...Object.entries(a.open_forward || {}).map(([k, p]) => `順 ${esc(k)} ${p.entry_bps?.toFixed?.(1) ?? ""}bp`),
-                  ...Object.entries(a.open_reverse || {}).map(([k, p]) => `逆 ${esc(k)} ${p.entry_bps?.toFixed?.(1) ?? ""}bp`)];
+                  ...Object.entries(a.open_reverse || {}).map(([k, p]) => `逆 ${esc(k)} ${p.entry_bps?.toFixed?.(1) ?? ""}bp`),
+                  ...Object.entries(a.open_covered || {}).map(([k, p]) => `現物活用 ${esc(k)} ${p.entry_bps?.toFixed?.(1) ?? ""}bp`)];
     const closes = (feed.events || []).filter((e) => e.lane === "gmo_basis_arb" && /CLOSED/.test(e.leg || ""));
     const arbPnl = closes.reduce((t, e) => t + (e.est_pnl_jpy || 0), 0);
     $("laneArb").innerHTML = `
       <div class="lane-head"><div class="t">GMO 現物⇄レバレッジ 価格差</div><div class="v" style="font-size:15px">${open.length ? open.length + "件 建玉中" : '<span class="muted">待機中</span>'}</div></div>
-      <div class="kv"><div class="k">決済済み</div><div class="v">${closes.length} 回</div><div class="k">推定損益の合計</div><div class="v ${cls(arbPnl)}">${closes.length ? signed(arbPnl) : "—"}</div></div>
-      <div class="note">各銘柄で今取引した場合の利ざや（順・逆の良い方、スプレッド込み）。黄色の線 = 20bp の建玉基準。マイナスは取引すると損をする状態で、「機会なし」と表示。</div>
+      <div class="kv"><div class="k">決済済み</div><div class="v">${closes.length} 回</div><div class="k">損益の合計（約定ベース／一部推定）</div><div class="v ${cls(arbPnl)}">${closes.length ? signed(arbPnl) : "—"}</div></div>
+      <div class="note">各銘柄で今取引した場合の利ざや（順・逆の良い方、スプレッド込み）。黄色の線 = 建玉基準（BTC・ETH・XRP はトレンドの現物を使うため手数料が安く、15bp で建てる分を上乗せ表示）。マイナスは取引すると損をする状態で、「機会なし」と表示。</div>
       <div class="bars">${rows.join("") || '<div class="empty">データなし</div>'}</div>
       ${open.length ? `<div class="chips">${open.map((o) => `<span class="chip">${o}</span>`).join("")}</div>` : ""}`;
   }
