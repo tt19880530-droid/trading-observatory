@@ -336,7 +336,9 @@ input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--lin
     const L = f.lanes, rows = [
       ["GMO 暗号トレンド", L.gmo_crypto_trend, 45], ["Saxo ETF", L.saxo_etf_trend, 45], ["価格差", L.gmo_basis_arb, 5],
     ];
-    $("health").innerHTML = rows.map(([name, l, maxAge]) => {
+    const wd = f.watchdog || {}, wdFail = Object.entries(wd.failing || {});
+    const wdRow = `<div class="hrow"><div>見張り役（5分ごと）<div class="sub muted" style="font-size:11px">${wd.generated_at ? esc(wdFail.map(([k, v]) => k + ": " + v).join(" / ") || "ネットワーク・ジョブ・証拠金・disk すべて正常") + " ・ " + jst(wd.generated_at) : "未取得"}</div></div><span class="pill ${!wd.generated_at ? "warn" : wdFail.length ? "bad" : "ok"}">${!wd.generated_at ? "—" : wdFail.length ? wdFail.length + "件 異常" : "正常"}</span></div>`;
+    $("health").innerHTML = wdRow + rows.map(([name, l, maxAge]) => {
       l = l || {};
       const age = ageMin(l.updated_at), okStatus = String(l.status || "").startsWith("OK");
       const blockers = [...(l.blockers || []), ...(l.entry_blockers || [])].filter((b) => !/US_SESSION_CLOSED/.test(b));
