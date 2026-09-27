@@ -170,7 +170,7 @@ header>div{min-width:0} header .btn{padding:8px}
   <section class="card rules">
     <details><summary>GMO 暗号資産トレンド</summary><p>BTC・ETH・XRP の現物を口座の55%まで保有（2026/9/26にLTC・BCHを外し主要3銘柄に集中）。4時間足で「14日前より高いか」「30日前より高いか」を30分ごとに判定し、両方上なら満額＋口座の40%分のレバレッジ買いを上乗せ、片方なら半分、両方下なら売却。証拠金維持率115%割れで上乗せを全決済。</p></details>
     <details><summary>急騰追随</summary><p>BTC・ETH・XRPで、確定した1時間足の上昇が過去30日の標準偏差の2.5倍を超えたら、口座の15%をレバレッジで買い、12時間後に決済。</p></details>
-    <details><summary>現物⇄レバレッジ 価格差</summary><p>GMOの現物とレバレッジの約定可能な価格差が20bpを超えたら、安い方を買い高い方を売る。差が縮んだら両方を決済（最長3日）。対象はBTC・ETH・XRP・LTC・BCH・DOGE・SOL・ADA・SUI・LINK。1回3万円、同時に最大3件。相場の上げ下げに左右されない。</p></details>
+    <details><summary>現物⇄レバレッジ 価格差</summary><p>GMOの現物とレバレッジの約定可能な価格差が20bpを超えたら、安い方を買い高い方を売る。差が縮んだら両方を決済（最長3日）。対象はBTC・ETH・XRP・LTC・BCH・DOGE・SOL・ADA・SUI・LINK。BTC・ETH・XRPはトレンドの現物を使ってレバレッジ売りだけを入れる（手数料なし・15bp）。他の銘柄は証拠金の許す最大額、30bp以上ならトレンドの現物を一時的に売って資金を回す。レバレッジ側を上限付きの即時注文で先に出し、約定した分だけ現物を買う。相場の上げ下げに左右されない。</p></details>
     <details><summary>OKX上位トレーダーのコピー（9/27〜）</summary><p>OKXの公開コピートレードAPIから上位トレーダーの建玉を5分ごとに取得。BTC・ETH・XRP・SOL・DOGEで、トレーダー1人1票の買い/売りの多数決（票の合計が8未満なら枠の一部だけ）に比例してGMOのレバレッジで保有。使う枠は証拠金維持率130%まで、110%割れで全決済。価格差戦略を止めた資金で試し、実績次第で拡大を判断。</p></details>
     <details><summary>Saxo ナスダック3倍＋金</summary><p>ナスダック100が200日移動平均より上ならTQQQ（3倍ETF）を70%、下なら売って現金。金（GLDM）は常に30%。米国市場の取引時間中のみ発注。</p></details>
   </section>
@@ -446,7 +446,7 @@ header>div{min-width:0} header .btn{padding:8px}
     const closes = (feed.events || []).filter((e) => e.lane === "gmo_basis_arb" && /CLOSED/.test(e.leg || ""));
     const arbPnl = closes.reduce((t, e) => t + (e.est_pnl_jpy || 0), 0);
     $("laneArb").innerHTML = `
-      <div class="lane-head"><div class="t">GMO 現物⇄レバレッジ 価格差 <span class="muted" style="font-size:12px">（9/27 停止）</span></div><div class="v" style="font-size:15px">${open.length ? open.length + "件 建玉中" : '<span class="muted">待機中</span>'}</div></div>
+      <div class="lane-head"><div class="t">GMO 現物⇄レバレッジ 価格差</div><div class="v" style="font-size:15px">${open.length ? open.length + "件 建玉中" : '<span class="muted">待機中</span>'}</div></div>
       <div class="kv"><div class="k">決済済み</div><div class="v">${closes.length} 回</div><div class="k">損益の合計（約定ベース／一部推定）</div><div class="v ${cls(arbPnl)}">${closes.length ? signed(arbPnl) : "—"}</div></div>
       <div class="note">各銘柄で今取引した場合の利ざや（順・逆の良い方、スプレッド込み）。黄色の線 = 建玉基準（BTC・ETH・XRP はトレンドの現物を使うため手数料が安く、15bp で建てる分を上乗せ表示）。マイナスは取引すると損をする状態で、「機会なし」と表示。</div>
       <div class="bars">${rows.join("") || '<div class="empty">データなし</div>'}</div>
@@ -470,7 +470,7 @@ header>div{min-width:0} header .btn{padding:8px}
 
   function renderHealth(f) {
     const L = f.lanes, rows = [
-      ["GMO 暗号トレンド", L.gmo_crypto_trend, 45], ["Saxo ETF", L.saxo_etf_trend, 45], ["コピー売買", L.gmo_copy, 15], ["価格差(停止中)", L.gmo_basis_arb, 1e9],
+      ["GMO 暗号トレンド", L.gmo_crypto_trend, 45], ["Saxo ETF", L.saxo_etf_trend, 45], ["コピー売買", L.gmo_copy, 15], ["価格差", L.gmo_basis_arb, 5],
     ];
     const wd = f.watchdog || {}, wdFail = Object.entries(wd.failing || {});
     const wdRow = `<div class="hrow"><div>見張り役（5分ごと）<div class="sub muted" style="font-size:11px">${wd.generated_at ? esc(wdFail.map(([k, v]) => k + ": " + v).join(" / ") || "ネットワーク・ジョブ・証拠金・disk すべて正常") + " ・ " + jst(wd.generated_at) : "未取得"}</div></div><span class="pill ${!wd.generated_at ? "warn" : wdFail.length ? "bad" : "ok"}">${!wd.generated_at ? "—" : wdFail.length ? wdFail.length + "件 異常" : "正常"}</span></div>`;
