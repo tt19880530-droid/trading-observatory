@@ -127,7 +127,7 @@ input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--lin
   <h2>取引・イベント</h2>
   <section class="card">
     <div class="tabs" id="evTabs">
-      <button data-l="" class="on">すべて</button><button data-l="gmo_crypto_trend">暗号トレンド</button><button data-l="gmo_basis_arb">価格差</button><button data-l="saxo_etf_trend">Saxo</button>
+      <button data-l="" class="on">すべて</button><button data-l="gmo_crypto_trend">暗号トレンド</button><button data-l="gmo_copy">コピー</button><button data-l="gmo_basis_arb">価格差</button><button data-l="saxo_etf_trend">Saxo</button>
     </div>
     <div class="events" id="events" style="margin-top:12px"></div>
   </section>
@@ -322,7 +322,7 @@ input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--lin
       ${open.length ? `<div class="chips">${open.map((o) => `<span class="chip">${o}</span>`).join("")}</div>` : ""}`;
   }
 
-  const LANE = { gmo_crypto_trend: ["暗号", "₿"], gmo_basis_arb: ["価格差", "⇄"], saxo_etf_trend: ["Saxo", "S"] };
+  const LANE = { gmo_crypto_trend: ["暗号", "₿"], gmo_basis_arb: ["価格差", "⇄"], saxo_etf_trend: ["Saxo", "S"], gmo_copy: ["コピー", "⧉"] };
   function renderEvents(evs) {
     const list = evs.filter((e) => !evLane || e.lane === evLane).slice().reverse().slice(0, 60);
     $("events").innerHTML = list.map((e) => {
@@ -330,16 +330,16 @@ input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--lin
       const what = e.leg || e.kind || "";
       const sym = e.symbol || e.coin || "";
       const failed = e.accepted === false || e.known === false || e.outcome_known === false;
-      const pnl = e.est_pnl_jpy;
+      const pnl = e.est_pnl_jpy ?? e.realized_pnl_jpy;
       const amt = pnl != null ? `<span class="${cls(pnl)}">${signed(pnl)}</span>` : e.notional_jpy != null ? yen(e.notional_jpy) : "";
-      const desc = /CLOSED/.test(what) ? "決済" : failed ? "失敗・要確認" : `${what} ${e.side || ""} ${e.size ?? e.amount ?? ""}`;
+      const desc = /CLOSED/.test(what) || (what === "CLOSE" && e.lane === "gmo_copy") ? "決済" : failed ? "失敗・要確認" : `${what} ${e.side || ""} ${e.size ?? e.amount ?? ""}`;
       return `<div class="ev"><div class="ic">${ic}</div><div><div>${esc(ln)} ・ ${esc(sym)} ・ <span class="${failed ? "neg" : ""}">${esc(desc)}</span></div><div class="sub">${jst(e.at)}${e.est_pnl_bps != null ? ` ・ ${e.est_pnl_bps}bp` : ""}</div></div><div class="amt">${amt}</div></div>`;
     }).join("") || '<div class="empty">まだ取引はありません</div>';
   }
 
   function renderHealth(f) {
     const L = f.lanes, rows = [
-      ["GMO 暗号トレンド", L.gmo_crypto_trend, 45], ["Saxo ETF", L.saxo_etf_trend, 45], ["価格差", L.gmo_basis_arb, 5],
+      ["GMO 暗号トレンド", L.gmo_crypto_trend, 45], ["Saxo ETF", L.saxo_etf_trend, 45], ["コピー売買", L.gmo_copy, 15], ["価格差(停止中)", L.gmo_basis_arb, 1e9],
     ];
     const wd = f.watchdog || {}, wdFail = Object.entries(wd.failing || {});
     const wdRow = `<div class="hrow"><div>見張り役（5分ごと）<div class="sub muted" style="font-size:11px">${wd.generated_at ? esc(wdFail.map(([k, v]) => k + ": " + v).join(" / ") || "ネットワーク・ジョブ・証拠金・disk すべて正常") + " ・ " + jst(wd.generated_at) : "未取得"}</div></div><span class="pill ${!wd.generated_at ? "warn" : wdFail.length ? "bad" : "ok"}">${!wd.generated_at ? "—" : wdFail.length ? wdFail.length + "件 異常" : "正常"}</span></div>`;
