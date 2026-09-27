@@ -150,6 +150,9 @@ header>div{min-width:0} header .btn{padding:8px}
   </div>
 
   <h2>Codex の作業</h2>
+  <h2>家計</h2>
+  <section class="card" id="household"><div class="empty">明細CSVを data/household/inbox に置くと表示されます</div></section>
+
   <section class="card" id="codex"></section>
 
   <h2>取引・イベント</h2>
@@ -228,6 +231,23 @@ header>div{min-width:0} header .btn{padding:8px}
     return { d: last.total - base.total, p: base.total ? (last.total - base.total) / base.total : null };
   }
 
+  function renderHousehold(h) {
+    const el = $("household"), months = (h?.months || []).slice(-6);
+    if (!months.length) { el.innerHTML = '<div class="empty">明細CSVを data/household/inbox に置くと表示されます</div>'; return; }
+    const max = Math.max(1, ...months.flatMap(m => [m.income || 0, m.expense || 0]));
+    const rate = v => v == null ? '算定不可' : `${(v * 100).toFixed(1)}%`;
+    const amount = v => v == null ? '算定不可' : yen(v);
+    el.innerHTML = '<div class="lane-head"><span class="t">家計・直近6か月</span></div>' +
+      '<div class="legend"><span style="color:var(--c1)">収入</span><span style="color:var(--c2)">支出</span></div>' +
+      months.map(m => `<div class="hrow"><span>${esc(m.month)}</span><span>貯蓄率 ${rate(m.savings_rate)}</span></div><div class="bars">` +
+        [['収入', m.income, 'c1'], ['支出', m.expense, 'c2']].map(([label, v, color]) =>
+          `<div class="bar"><span>${label}</span><div class="track"><div class="fill" style="width:${Math.max(0, (v || 0) / max * 100)}%;background:var(--${color})"></div></div><span>${amount(v)}</span></div>`).join('') + '</div>').join('') +
+      '<div class="kv">' + [['定期支出候補／月', amount(h.fixed_cost_monthly_total)], ['サブスク候補', h.subscription_count == null ? '—' : h.subscription_count + '件'],
+        ['投資可能額／月', amount(h.investable_monthly)], ['投資可能額／今すぐ', amount(h.investable_now)], ['生活防衛資金目標', amount(h.emergency_target)]]
+        .map(([k,v]) => `<span class="k">${k}</span><span class="v">${v}</span>`).join('') + '</div>' +
+      `<p class="muted" style="font-size:12px">明細期間 ${esc(h.data_coverage?.first_date || '—')}〜${esc(h.data_coverage?.last_date || '—')}。入力明細のみの概算。当月は途中集計、投資額は連続3〜6完了月から算定。負数は不足額。詳細・確認事項はローカルレポート。</p>`;
+  }
+
   function render() {
     const f = feed, hist = f.equity_history || [];
     const age = ageMin(f.generated_at);
@@ -249,6 +269,7 @@ header>div{min-width:0} header .btn{padding:8px}
     renderCodex(f.codex_tasks || []);
     renderEvents(f.events || []);
     renderHealth(f);
+    renderHousehold(f.household);
   }
 
   function drawChart(hist) {
