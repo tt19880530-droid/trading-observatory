@@ -122,7 +122,13 @@ input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--lin
     <section class="card" id="laneCrypto"></section>
     <section class="card" id="laneSaxo"></section>
   </div>
-  <div class="grid"><section class="card" id="laneArb"></section></div>
+  <div class="grid two">
+    <section class="card" id="laneCopy"></section>
+    <section class="card" id="laneArb"></section>
+  </div>
+
+  <h2>Codex の作業</h2>
+  <section class="card" id="codex"></section>
 
   <h2>取引・イベント</h2>
   <section class="card">
@@ -140,6 +146,7 @@ input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--lin
     <details><summary>GMO 暗号資産トレンド</summary><p>BTC・ETH・XRP の現物を口座の55%まで保有（2026/9/26にLTC・BCHを外し主要3銘柄に集中）。4時間足で「14日前より高いか」「30日前より高いか」を30分ごとに判定し、両方上なら満額＋口座の40%分のレバレッジ買いを上乗せ、片方なら半分、両方下なら売却。証拠金維持率115%割れで上乗せを全決済。</p></details>
     <details><summary>急騰追随</summary><p>BTC・ETH・XRPで、確定した1時間足の上昇が過去30日の標準偏差の2.5倍を超えたら、口座の15%をレバレッジで買い、12時間後に決済。</p></details>
     <details><summary>現物⇄レバレッジ 価格差</summary><p>GMOの現物とレバレッジの約定可能な価格差が20bpを超えたら、安い方を買い高い方を売る。差が縮んだら両方を決済（最長3日）。対象はBTC・ETH・XRP・LTC・BCH・DOGE・SOL・ADA・SUI・LINK。1回3万円、同時に最大3件。相場の上げ下げに左右されない。</p></details>
+    <details><summary>OKX上位トレーダーのコピー（9/27〜）</summary><p>OKXの公開コピートレードAPIから上位トレーダーの建玉を5分ごとに取得。BTC・ETH・XRP・SOL・DOGEで、トレーダー1人1票の買い/売りの多数決（票の合計が8未満なら枠の一部だけ）に比例してGMOのレバレッジで保有。使う枠は証拠金維持率130%まで、110%割れで全決済。価格差戦略を止めた資金で試し、実績次第で拡大を判断。</p></details>
     <details><summary>Saxo ナスダック3倍＋金</summary><p>ナスダック100が200日移動平均より上ならTQQQ（3倍ETF）を70%、下なら売って現金。金（GLDM）は常に30%。米国市場の取引時間中のみ発注。</p></details>
   </section>
 </div>
@@ -214,7 +221,9 @@ input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--lin
     drawChart(hist);
     renderCrypto(f.lanes.gmo_crypto_trend || {});
     renderSaxo(f.lanes.saxo_etf_trend || {});
+    renderCopy(f.lanes.gmo_copy || {});
     renderArb(f.lanes.gmo_basis_arb || {});
+    renderCodex(f.codex_tasks || []);
     renderEvents(f.events || []);
     renderHealth(f);
   }
@@ -291,6 +300,30 @@ input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--lin
       <div class="note">200日線を下回るとTQQQを売却して現金化。発注は米国市場時間のみ。</div>`;
   }
 
+  function renderCopy(k) {
+    const votes = k.votes || {}, tg = k.targets_jpy || {}, pos = k.positions || {};
+    const coins = Object.keys(votes);
+    const rows = coins.map((c) => {
+      const v = votes[c] || 0, p = pos[c];
+      const held = p ? `${p.side === "BUY" ? '<span class="pos">買</span>' : '<span class="neg">売</span>'} ${p.qty}` : '<span class="muted">なし</span>';
+      return `<div class="k">${esc(c)} <span class="muted" style="font-size:11px">票 ${v > 0 ? "+" : ""}${v}</span></div><div class="v">${held} <span class="muted" style="font-size:11px">目標 ${yen(tg[c] || 0)}</span></div>`;
+    }).join("");
+    const closes = (feed.events || []).filter((e) => e.lane === "gmo_copy" && e.leg === "CLOSE" && e.accepted);
+    const pnl = k.realized_pnl_jpy ?? closes.reduce((t, e) => t + (e.realized_pnl_jpy || 0), 0);
+    $("laneCopy").innerHTML = `
+      <div class="lane-head"><div class="t">OKX上位トレーダーのコピー</div><div class="v ${cls(pnl)}" style="font-size:15px">${signed(pnl)}</div></div>
+      <div class="kv"><div class="k">使える枠（証拠金維持率130%まで）</div><div class="v">${yen(k.budget_jpy)}</div>${rows}</div>
+      <div class="note">OKXの上位トレーダーの新規建玉を5分ごとに集計し、銘柄ごとに1人1票の多数決の向きでGMOレバレッジを保有。票が消えれば決済。損益は確定分（約定ベース）。${(k.blockers || []).length ? " 制限: " + esc(k.blockers.join(" / ")) : ""}</div>`;
+  }
+
+  function renderCodex(tasks) {
+    $("codex").innerHTML = tasks.length ? tasks.slice().reverse().map((t) => {
+      const st = t.state === "running" ? ["warn", "実行中"] : t.state === "done" ? ["ok", "完了"] : t.state === "failed" ? ["bad", "失敗"] : ["warn", t.state];
+      return `<details ${t.state === "running" ? "open" : ""}><summary><span class="pill ${st[0]}">${st[1]}</span> ${esc(t.name)} <span class="muted" style="font-size:11px">${jst(t.started_at)}${t.finished_at ? " → " + jst(t.finished_at) : ""}</span></summary>
+        <pre style="white-space:pre-wrap;font-size:11px;max-height:320px;overflow:auto;margin:8px 0 0">${esc((t.log_tail || []).join("\n")) || "ログなし"}</pre></details>`;
+    }).join("") : '<div class="empty">Codex への依頼はまだありません</div>';
+  }
+
   function renderArb(a) {
     const TH = 20, rows = [];
     const f = { ...(a.forward_edges_bps || {}) }, r = a.reverse_edges_bps || {}, cv = a.covered_edges_bps || {};
@@ -315,7 +348,7 @@ input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--lin
     const closes = (feed.events || []).filter((e) => e.lane === "gmo_basis_arb" && /CLOSED/.test(e.leg || ""));
     const arbPnl = closes.reduce((t, e) => t + (e.est_pnl_jpy || 0), 0);
     $("laneArb").innerHTML = `
-      <div class="lane-head"><div class="t">GMO 現物⇄レバレッジ 価格差</div><div class="v" style="font-size:15px">${open.length ? open.length + "件 建玉中" : '<span class="muted">待機中</span>'}</div></div>
+      <div class="lane-head"><div class="t">GMO 現物⇄レバレッジ 価格差 <span class="muted" style="font-size:12px">（9/27 停止）</span></div><div class="v" style="font-size:15px">${open.length ? open.length + "件 建玉中" : '<span class="muted">待機中</span>'}</div></div>
       <div class="kv"><div class="k">決済済み</div><div class="v">${closes.length} 回</div><div class="k">損益の合計（約定ベース／一部推定）</div><div class="v ${cls(arbPnl)}">${closes.length ? signed(arbPnl) : "—"}</div></div>
       <div class="note">各銘柄で今取引した場合の利ざや（順・逆の良い方、スプレッド込み）。黄色の線 = 建玉基準（BTC・ETH・XRP はトレンドの現物を使うため手数料が安く、15bp で建てる分を上乗せ表示）。マイナスは取引すると損をする状態で、「機会なし」と表示。</div>
       <div class="bars">${rows.join("") || '<div class="empty">データなし</div>'}</div>
