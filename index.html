@@ -105,6 +105,7 @@ header>div{min-width:0} header .btn{padding:8px}
 .copy-votes th:first-child,.copy-votes td:first-child{width:24%}
 .copy-votes th:nth-child(2){width:9%}
 .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.saxo-vote-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;padding:10px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -118,11 +119,13 @@ header>div{min-width:0} header .btn{padding:8px}
   <section class="card hero">
     <div class="label">合計評価額</div>
     <div class="big" id="total">—</div>
+    <div class="note">残高増減（入出金・口座の集計範囲変更を含む／運用損益ではありません）</div>
     <div class="deltas">
       <div class="delta"><div class="k">24時間</div><div class="v" id="d24">—</div></div>
       <div class="delta"><div class="k">7日</div><div class="v" id="d7">—</div></div>
       <div class="delta"><div class="k">記録開始から</div><div class="v" id="dAll">—</div></div>
     </div>
+    <div id="capitalChanges"></div>
   </section>
 
   <h2>評価額の推移</h2>
@@ -131,6 +134,7 @@ header>div{min-width:0} header .btn{padding:8px}
       <button data-r="1">24時間</button><button data-r="7" class="on">7日</button><button data-r="30">30日</button><button data-r="0">全期間</button>
     </div>
     <div class="chart"><svg id="chart"></svg><div class="tip" id="tip"></div></div>
+    <div class="note">口座残高の推移です。入出金・振替や集計対象の追加による段差も含みます。</div>
     <div class="legend"><span><i style="background:var(--c1)"></i>合計</span><span><i style="background:var(--c3)"></i>GMO暗号</span><span><i style="background:var(--c2)"></i>Saxo</span></div>
   </section>
 
@@ -140,7 +144,7 @@ header>div{min-width:0} header .btn{padding:8px}
     <div class="chart"><svg id="pnlChart" role="img" aria-label="戦略別の累計損益（円）"></svg></div>
     <div class="legend" id="pnlLegend"></div>
     <div class="pnl-values" id="pnlValues"></div>
-    <div class="note">GMOコピー：確定損益のみ。Saxoコピー：確定損益（台帳の記録分）＋含み損益。確定分未取得時は含み損益のみ。価格差：決済損益（一部推定・9/27停止）。暗号トレンド・Saxo ETF：評価額の増減（入出金を含む）。同じ口座を含むため各線は合算できません。</div>
+    <div class="note">GMOコピー：確定損益のみ。Saxoコピー：確定損益（台帳の記録分）＋含み損益。確定分未取得時は含み損益のみ。価格差：決済損益（一部推定・9/27停止）。GMO口座・Saxo ETF口座の運用損益は入出金・振替未照合のため未算定。残高増減を損益線として描画しません。各戦略の数値は口座全体の損益ではありません。</div>
   </section>
 
   <h2>口座・戦略の状況</h2>
@@ -265,9 +269,10 @@ header>div{min-width:0} header .btn{padding:8px}
     $("total").textContent = yen(f.total_equity_jpy);
     [["d24", 24], ["d7", 168], ["dAll", 0]].forEach(([id, h]) => {
       const c = changeSince(hist, h), el = $(id);
-      el.className = "v " + (c ? cls(c.d) : "muted");
-      el.textContent = c ? signed(c.d) + pct(c.p) : "—";
+      el.className = "v muted";
+      el.textContent = c ? signed(c.d) : "—";
     });
+    renderCapitalChanges(f.capital_changes || {});
     drawChart(hist);
     drawPnlChart();
     renderCrypto(f.lanes.gmo_crypto_trend || {});
@@ -279,6 +284,14 @@ header>div{min-width:0} header .btn{padding:8px}
     renderEvents(f.events || []);
     renderHealth(f);
     renderHousehold(f.household);
+  }
+
+  function renderCapitalChanges(c) {
+    const a = c.accounts?.total || {}, saxo = c.accounts?.saxo || {};
+    $("capitalChanges").innerHTML = `<div class="kv"><div class="k">確認済み純入金</div><div class="v">${yen(a.confirmed_net_deposits_jpy)}</div>
+      <div class="k">入金控除後の増減（暫定）</div><div class="v">${signed(a.change_less_confirmed_flows_jpy)}</div></div>
+      <div class="note">${(c.events || []).map((e) => `${esc(e.date_jst)} ${e.account === "saxo" ? "Saxo" : "GMO"} ${e.amount_jpy >= 0 ? "入金" : "出金"} ${yen(Math.abs(e.amount_jpy))}（本人確認）`).join(" ／ ") || "入出金明細未照合"}。${esc(c.note || "入出金未照合のため運用損益は未算定です。")}</div>
+      <div class="note">Saxo全体：残高増減 ${signed(saxo.equity_change_jpy)} − 確認済み純入金 ${yen(saxo.confirmed_net_deposits_jpy)} ＝ ${signed(saxo.change_less_confirmed_flows_jpy)}（暫定・${jst(c.since)}から）</div>`;
   }
 
   function drawChart(hist) {
@@ -318,7 +331,7 @@ header>div{min-width:0} header .btn{padding:8px}
   const PNL_LANES = [
     ["gmo_copy", "GMOコピー", "var(--c1)"], ["gmo_basis_arb", "価格差", "var(--warn)"],
     ["saxo_copy", "Saxoコピー（確定＋含み）", "var(--pos)"],
-    ["gmo_crypto_trend", "暗号トレンド", "var(--c3)"], ["saxo_etf_trend", "Saxo ETF", "var(--c2)"],
+
   ];
   function drawPnlChart() {
     const svg = $("pnlChart"), W = svg.clientWidth || 340, H = 220;
@@ -371,10 +384,7 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   function laneDelta(key) {
-    const h = (feed.equity_history || []).filter((x) => x[key] != null);
-    if (h.length < 2) return "";
-    const d = h[h.length - 1][key] - h[0][key];
-    return `<div class="sub ${cls(d)}" style="text-align:right;font-family:var(--mono);font-size:12px">${signed(d)}${pct(h[0][key] ? d / h[0][key] : null)} 記録開始から</div>`;
+    return '<div class="sub muted" style="text-align:right;font-size:12px">運用損益：入出金・振替未照合のため未算定</div>';
   }
   const arrow = (v) => v === 1 ? '<span class="pos">▲</span>' : v === 0.5 ? '<span class="warn">▶</span>' : '<span class="neg">▼</span>';
   const sum = (o) => Object.values(o || {}).reduce((a, b) => a + (b || 0), 0);
@@ -383,7 +393,7 @@ header>div{min-width:0} header .btn{padding:8px}
     const mr = c.margin_ratio, mrPct = mr ? Math.min(mr / 3, 1) : 0;
     const mrColor = !mr ? "var(--muted)" : mr < 1.4 ? "var(--neg)" : mr < 1.8 ? "var(--warn)" : "var(--pos)";
     $("laneCrypto").innerHTML = `
-      <div class="lane-head"><div class="t">GMO 暗号資産トレンド</div><div class="v">${yen(c.equity_jpy)}</div></div>${laneDelta("gmo_crypto")}
+      <div class="lane-head"><div class="t">GMO 暗号口座・トレンド</div><div class="v">${yen(c.equity_jpy)}</div></div>${laneDelta("gmo_crypto")}
       <div class="chips">${Object.entries(c.trend_scores || {}).map(([k, v]) => `<span class="chip">${esc(k)} ${arrow(v)}</span>`).join("") || '<span class="muted">—</span>'}</div>
       <div class="kv">
         <div class="k">現物</div><div class="v">${yen(sum(c.spot_jpy))}</div>
@@ -399,15 +409,15 @@ header>div{min-width:0} header .btn{padding:8px}
     const h = s.holdings || {}, on = s.nasdaq_above_sma200;
     const stopped = s.liquidating || (s.holdings != null && !Object.values(h).some((v) => Number(v) !== 0));
     $("laneSaxo").innerHTML = `
-      <div class="lane-head"><div class="t">Saxo ナスダック3倍＋金</div><div class="v">${yen(s.equity_jpy)}</div></div>${laneDelta("saxo_etf")}
-      ${stopped ? '<div class="chips"><span class="pill warn">清算中/停止</span></div>' : ""}
-      <div class="chips"><span class="chip">ナスダック 200日線 ${on === true ? '<span class="pos">上 ▲</span>' : on === false ? '<span class="neg">下 ▼</span>' : "—"}</span></div>
+      <div class="lane-head"><div class="t">Saxo ETF口座${stopped ? "（停止）" : "・ナスダック3倍＋金"}</div><div class="v">${yen(s.equity_jpy)}</div></div>${laneDelta("saxo_etf")}
+      ${stopped ? `<div class="chips"><span class="pill warn">${Object.values(h).some((v) => Number(v) !== 0) ? "清算中・新規買い停止" : "保有なし・新規買い停止"}</span></div>` : ""}
+      ${!stopped ? `<div class="chips"><span class="chip">ナスダック 200日線 ${on === true ? '<span class="pos">上 ▲</span>' : on === false ? '<span class="neg">下 ▼</span>' : "—"}</span></div>` : ""}
       <div class="kv">
         <div class="k">TQQQ（ナスダック3倍）</div><div class="v">${h["TQQQ:xnas"] ?? 0} 株</div>
         <div class="k">GLDM（金）</div><div class="v">${h["GLDM:arcx"] ?? 0} 株</div>
         <div class="k">目標配分</div><div class="v">${stopped ? "清算・現金化" : "TQQQ 70% / 金 30%"}</div>
       </div>
-      <div class="note">${stopped ? "新規買い停止。残りのETFを米国市場時間に清算します。" : "200日線を下回るとTQQQを売却して現金化。発注は米国市場時間のみ。"}</div>`;
+      <div class="note">${stopped ? "この金額はETF口座の残高で、ナスダックの運用益ではありません。新規買いは停止中。コピー売買は下の別口座に表示します。" : "200日線を下回るとTQQQを売却して現金化。発注は米国市場時間のみ。"}</div>`;
   }
 
   function renderCopy(k) {
@@ -453,17 +463,21 @@ header>div{min-width:0} header .btn{padding:8px}
     const rows = keys.map((key) => ({ key, symbol: symbols[key] || key }));
     for (const symbol of Object.keys(held)) if (!rows.some((r) => r.symbol === symbol)) rows.push({ symbol });
     const table = rows.map(({ key, symbol }) => {
-      const p = held[symbol], pnl = p ? (p.known ? p.pnl : null) : 0;
-      return `<tr><td>${esc(symbol)}</td><td>${number(votes[key] ?? 0)}</td><td>${yen(targets[key] ?? 0)}</td><td>${p ? number(p.amount) : "なし"}</td><td class="${cls(pnl)}">${signed(pnl)}</td></tr>`;
+      const p = held[symbol], pnl = p ? (p.known ? p.pnl : null) : null;
+      const vote = votes[key], target = targets[key];
+      const heldText = p && p.amount !== 0 ? `<span class="${p.amount > 0 ? "pos" : "neg"}">${p.amount > 0 ? "買" : "売"}</span> ${number(Math.abs(p.amount))}` : '<span class="muted">保有なし</span>';
+      return `<div class="saxo-vote-row"><div><b>${esc(key || symbol)}</b> <span class="${cls(vote)}">票 ${Number.isFinite(vote) ? (vote > 0 ? "+" : "") + number(vote) : "—"}</span><div class="muted" style="font-size:10px">${esc(symbol)}</div></div>
+        <div style="text-align:right">${heldText}<div class="muted" style="font-size:11px">目標 ${Number.isFinite(target) ? (target > 0 ? "買 " : target < 0 ? "売 " : "") + yen(Math.abs(target)) : "—"}</div>
+        <div class="${cls(pnl)}" style="font-size:11px">含み損益 ${signed(pnl)}</div></div></div>`;
     }).join("");
     $("laneSaxoCopy").innerHTML = `<div class="lane-head"><div class="t">Saxo 株・商品コピー（OKX上位トレーダー）</div></div>
-      <div class="kv"><div class="k">CFD口座評価額</div><div class="v">${yen(k.account_value_jpy)}</div>
+      <div class="kv"><div class="k">株・商品CFD口座合計</div><div class="v">${yen(k.account_value_jpy)}</div>
       <div class="k">運用予算</div><div class="v">${yen(k.budget_jpy)}</div>
       <div class="k">含み損益</div><div class="v ${cls(k.unrealized_pnl_jpy)}">${signed(k.unrealized_pnl_jpy)}</div>
       <div class="k">確定損益（台帳の記録分）</div><div class="v ${cls(k.realized_pnl_jpy)}">${signed(k.realized_pnl_jpy)}</div>
       <div class="k">証拠金使用率</div><div class="v">${k.margin_utilization_pct == null ? "—" : number(k.margin_utilization_pct) + "%"}</div></div>
-      ${table ? `<table class="variants copy-votes" aria-label="Saxoコピーの投票と保有"><thead><tr><th>銘柄</th><th>票</th><th>目標</th><th>保有</th><th>含み損益</th></tr></thead><tbody>${table}</tbody></table>` : '<div class="empty">投票・保有データなし</div>'}
-      <div class="note">1人1票の純票数で米国株・商品CFDへ配分。5分ごとに更新。保有の＋は買い、−は売り。確定損益の「—」は未取得です。</div>
+      ${table ? `<div aria-label="Saxoコピーの投票と保有">${table}</div>` : '<div class="empty">投票・保有データなし</div>'}
+      <div class="note">1人1票の純票数で米国株・商品CFDへ配分。5分ごとに更新。票の＋は買い優勢、−は売り優勢。確定損益の「—」は未取得です。</div>
       ${(k.blockers || []).length ? `<div class="note warn">${k.blockers.map((b) => esc(blockerText(b))).join(" / ")}</div>` : ""}`;
   }
 
