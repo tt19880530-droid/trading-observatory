@@ -144,7 +144,7 @@ header>div{min-width:0} header .btn{padding:8px}
     <div class="chart"><svg id="pnlChart" role="img" aria-label="戦略別の累計損益（円）"></svg></div>
     <div class="legend" id="pnlLegend"></div>
     <div class="pnl-values" id="pnlValues"></div>
-    <div class="note">GMOコピー：確定損益のみ。Saxoコピー：確定損益（台帳の記録分）＋含み損益。確定分未取得時は含み損益のみ。価格差：決済損益（一部推定・9/27停止）。GMO口座・Saxo ETF口座の運用損益は入出金・振替未照合のため未算定。残高増減を損益線として描画しません。各戦略の数値は口座全体の損益ではありません。</div>
+    <div class="note">GMOコピー：確定損益のみ。Saxoコピー：確定損益（台帳の記録分）＋含み損益。確定分未取得時は含み損益のみ。価格差：決済損益（約定ベース、一部推定）。GMO口座は入出金がないため評価額の増減＝損益。Saxo ETF口座はCFD口座へ振替中のため損益線なし。残高増減を損益線として描画しません。各戦略の数値は口座全体の損益ではありません。</div>
   </section>
 
   <h2>口座・戦略の状況</h2>
@@ -244,18 +244,20 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   function renderHousehold(h) {
-    const el = $("household"), months = (h?.months || []).slice(-6);
+    // only completed or current months (card statements can pre-book next month's billing)
+    const thisMonth = new Date().toISOString().slice(0, 7);
+    const el = $("household"), months = (h?.months || []).filter(m => m.month <= thisMonth).slice(-6);
     if (!months.length) { el.innerHTML = '<div class="empty">明細CSVを data/household/inbox に置くと表示されます</div>'; return; }
     const max = Math.max(1, ...months.flatMap(m => [m.income || 0, m.expense || 0]));
     const rate = v => v == null ? '算定不可' : `${(v * 100).toFixed(1)}%`;
-    const amount = v => v == null ? '算定不可' : yen(v);
+    const amount = v => v == null ? '算定不可' : v < 0 ? `不足 ${yen(-v)}` : yen(v);
     el.innerHTML = '<div class="lane-head"><span class="t">家計・直近6か月</span></div>' +
       '<div class="legend"><span style="color:var(--c1)">収入</span><span style="color:var(--c2)">支出</span></div>' +
       months.map(m => `<div class="hrow"><span>${esc(m.month)}</span><span>貯蓄率 ${rate(m.savings_rate)}</span></div><div class="bars">` +
         [['収入', m.income, 'c1'], ['支出', m.expense, 'c2']].map(([label, v, color]) =>
           `<div class="bar"><span>${label}</span><div class="track"><div class="fill" style="width:${Math.max(0, (v || 0) / max * 100)}%;background:var(--${color})"></div></div><span>${amount(v)}</span></div>`).join('') + '</div>').join('') +
       '<div class="kv">' + [['定期支出候補／月', amount(h.fixed_cost_monthly_total)], ['サブスク候補', h.subscription_count == null ? '—' : h.subscription_count + '件'],
-        ['投資可能額／月', amount(h.investable_monthly)], ['投資可能額／今すぐ', amount(h.investable_now)], ['生活防衛資金目標', amount(h.emergency_target)]]
+        ['投資に回せる額／月', amount(h.investable_monthly)], ['投資に回せる額／今すぐ（生活防衛資金との差）', amount(h.investable_now)], ['生活防衛資金目標', amount(h.emergency_target)]]
         .map(([k,v]) => `<span class="k">${k}</span><span class="v">${v}</span>`).join('') + '</div>' +
       `<p class="muted" style="font-size:12px">明細期間 ${esc(h.data_coverage?.first_date || '—')}〜${esc(h.data_coverage?.last_date || '—')}。入力明細のみの概算。当月は途中集計、投資額は連続3〜6完了月から算定。負数は不足額。詳細・確認事項はローカルレポート。</p>`;
   }
@@ -384,7 +386,15 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   function laneDelta(key) {
-    return '<div class="sub muted" style="text-align:right;font-size:12px">運用損益：入出金・振替未照合のため未算定</div>';
+    // GMO has had no deposits/withdrawals since the record started, so its equity change is its PnL.
+    // The Saxo ETF account now only holds cash that is being moved to the CFD accounts: no PnL line.
+    const acc = (feed.capital_changes?.accounts || {})[key === "gmo_crypto" ? "gmo_crypto" : "__none"];
+    if (!acc || !Number.isFinite(acc.equity_change_jpy)) {
+      return '<div class="sub muted" style="text-align:right;font-size:12px">口座間振替中のため損益表示なし</div>';
+    }
+    const v = acc.equity_change_jpy - (acc.confirmed_net_deposits_jpy || 0);
+    const pct = acc.baseline_jpy ? ` (${(v / acc.baseline_jpy * 100).toFixed(1)}%)` : "";
+    return `<div class="sub ${cls(v)}" style="text-align:right;font-size:12px">記録開始から ${signed(v)}${pct}</div>`;
   }
   const arrow = (v) => v === 1 ? '<span class="pos">▲</span>' : v === 0.5 ? '<span class="warn">▶</span>' : '<span class="neg">▼</span>';
   const sum = (o) => Object.values(o || {}).reduce((a, b) => a + (b || 0), 0);
