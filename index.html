@@ -100,6 +100,10 @@ header>div{min-width:0} header .btn{padding:8px}
 .pnl-values{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;font-size:12px}
 .pnl-values>div{min-width:0}
 .pnl-values b{display:block;font-family:var(--mono)}
+.lane-head{flex-wrap:wrap}.lane-head .v{margin-left:auto}
+.note,.ev>div,.kv>div{min-width:0;overflow-wrap:anywhere}
+.copy-votes th:first-child,.copy-votes td:first-child{width:24%}
+.copy-votes th:nth-child(2){width:9%}
 .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 </style>
 </head>
@@ -136,29 +140,32 @@ header>div{min-width:0} header .btn{padding:8px}
     <div class="chart"><svg id="pnlChart" role="img" aria-label="戦略別の累計損益（円）"></svg></div>
     <div class="legend" id="pnlLegend"></div>
     <div class="pnl-values" id="pnlValues"></div>
-    <div class="note">コピー：確定損益のみ（含み損益なし）。価格差：決済損益（一部推定・9/27停止）。暗号トレンド・Saxo：評価額の増減（入出金を含む）。同じ口座を含むため各線は合算できません。</div>
+    <div class="note">GMOコピー：確定損益のみ。Saxoコピー：確定損益（台帳の記録分）＋含み損益。確定分未取得時は含み損益のみ。価格差：決済損益（一部推定・9/27停止）。暗号トレンド・Saxo ETF：評価額の増減（入出金を含む）。同じ口座を含むため各線は合算できません。</div>
   </section>
 
-  <h2>戦略</h2>
+  <h2>口座・戦略の状況</h2>
   <div class="grid two">
     <section class="card" id="laneCrypto"></section>
     <section class="card" id="laneSaxo"></section>
   </div>
   <div class="grid two">
     <section class="card" id="laneCopy"></section>
+    <section class="card" id="laneSaxoCopy"></section>
+  </div>
+  <div class="grid">
     <section class="card" id="laneArb"></section>
   </div>
 
-  <h2>Codex の作業</h2>
   <h2>家計</h2>
   <section class="card" id="household"><div class="empty">明細CSVを data/household/inbox に置くと表示されます</div></section>
 
+  <h2>Codex の作業</h2>
   <section class="card" id="codex"></section>
 
   <h2>取引・イベント</h2>
   <section class="card">
     <div class="tabs" id="evTabs">
-      <button data-l="" class="on">すべて</button><button data-l="gmo_crypto_trend">暗号トレンド</button><button data-l="gmo_copy">コピー</button><button data-l="gmo_basis_arb">価格差</button><button data-l="saxo_etf_trend">Saxo</button>
+      <button data-l="" class="on">すべて</button><button data-l="gmo_crypto_trend">暗号トレンド</button><button data-l="gmo_copy">GMOコピー</button><button data-l="gmo_basis_arb">価格差</button><button data-l="saxo_etf_trend">Saxo ETF</button><button data-l="saxo_copy">Saxoコピー</button>
     </div>
     <div class="events" id="events" style="margin-top:12px"></div>
   </section>
@@ -170,9 +177,10 @@ header>div{min-width:0} header .btn{padding:8px}
   <section class="card rules">
     <details><summary>GMO 暗号資産トレンド</summary><p>BTC・ETH・XRP の現物を口座の55%まで保有（2026/9/26にLTC・BCHを外し主要3銘柄に集中）。4時間足で「14日前より高いか」「30日前より高いか」を30分ごとに判定し、両方上なら満額＋口座の40%分のレバレッジ買いを上乗せ、片方なら半分、両方下なら売却。証拠金維持率115%割れで上乗せを全決済。</p></details>
     <details><summary>急騰追随</summary><p>BTC・ETH・XRPで、確定した1時間足の上昇が過去30日の標準偏差の2.5倍を超えたら、口座の15%をレバレッジで買い、12時間後に決済。</p></details>
-    <details><summary>現物⇄レバレッジ 価格差</summary><p>GMOの現物とレバレッジの約定可能な価格差が20bpを超えたら、安い方を買い高い方を売る。差が縮んだら両方を決済（最長3日）。対象はBTC・ETH・XRP・LTC・BCH・DOGE・SOL・ADA・SUI・LINK。BTC・ETH・XRPはトレンドの現物を使ってレバレッジ売りだけを入れる（手数料なし・15bp）。他の銘柄は証拠金の許す最大額、30bp以上ならトレンドの現物を一時的に売って資金を回す。レバレッジ側を上限付きの即時注文で先に出し、約定した分だけ現物を買う。相場の上げ下げに左右されない。</p></details>
-    <details><summary>OKX上位トレーダーのコピー（9/27〜）</summary><p>OKXの公開コピートレードAPIから上位トレーダーの建玉を5分ごとに取得。BTC・ETH・XRP・SOL・DOGEで、トレーダー1人1票の買い/売りの多数決（票の合計が8未満なら枠の一部だけ）に比例してGMOのレバレッジで保有。使う枠は証拠金維持率130%まで、110%割れで全決済。価格差戦略を止めた資金で試し、実績次第で拡大を判断。</p></details>
-    <details><summary>Saxo ナスダック3倍＋金</summary><p>ナスダック100が200日移動平均より上ならTQQQ（3倍ETF）を70%、下なら売って現金。金（GLDM）は常に30%。米国市場の取引時間中のみ発注。</p></details>
+    <details><summary>現物⇄レバレッジ 価格差</summary><p>GMOの現物とレバレッジの価格差を監視。成行側の新規建玉基準は30bp以上（0.30%）。安い方を買い、高い方を売り、差が縮んだら決済します。指値で待つ新規建玉（maker）は停止中です。</p></details>
+    <details><summary>GMO コピー（OKX上位トレーダー）</summary><p>OKX上位トレーダーの建玉を5分ごとに集計。BTC・ETH・XRP・SOL・DOGEで1人1票の買い・売りの多数決に応じてGMOレバレッジを保有します。上限10万円・維持率145%まで。票が消えれば決済します。</p></details>
+    <details><summary>Saxo ETF（清算中）</summary><p>ナスダック3倍ETF（TQQQ）と金ETF（GLDM）は清算中。米国市場時間に残りの保有を売却し、新規買いは停止しています。</p></details>
+    <details><summary>Saxo 株・商品コピー（OKX上位トレーダー）</summary><p>OKX上位トレーダーの米国株・商品の建玉を5分ごとに集計。銘柄ごとに1人1票、買いを＋1・売りを−1として差し引き、純票数に応じて予算を配分します。分母は純票数の絶対値の合計と4の大きい方で、票が少ないと予算の一部だけを使います。SaxoのCFD（差金決済取引）で追随し、株と商品それぞれの市場時間に発注します。</p></details>
   </section>
 </div>
 
@@ -265,6 +273,7 @@ header>div{min-width:0} header .btn{padding:8px}
     renderCrypto(f.lanes.gmo_crypto_trend || {});
     renderSaxo(f.lanes.saxo_etf_trend || {});
     renderCopy(f.lanes.gmo_copy || {});
+    renderSaxoCopy(f.lanes.saxo_copy || {});
     renderArb(f.lanes.gmo_basis_arb || {});
     renderCodex(f.codex_tasks || []);
     renderEvents(f.events || []);
@@ -307,8 +316,9 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   const PNL_LANES = [
-    ["gmo_copy", "コピー", "var(--c1)"], ["gmo_basis_arb", "価格差", "var(--warn)"],
-    ["gmo_crypto_trend", "暗号トレンド", "var(--c3)"], ["saxo_etf_trend", "Saxo", "var(--c2)"],
+    ["gmo_copy", "GMOコピー", "var(--c1)"], ["gmo_basis_arb", "価格差", "var(--warn)"],
+    ["saxo_copy", "Saxoコピー（確定＋含み）", "var(--pos)"],
+    ["gmo_crypto_trend", "暗号トレンド", "var(--c3)"], ["saxo_etf_trend", "Saxo ETF", "var(--c2)"],
   ];
   function drawPnlChart() {
     const svg = $("pnlChart"), W = svg.clientWidth || 340, H = 220;
@@ -387,15 +397,17 @@ header>div{min-width:0} header .btn{padding:8px}
 
   function renderSaxo(s) {
     const h = s.holdings || {}, on = s.nasdaq_above_sma200;
+    const stopped = s.liquidating || (s.holdings != null && !Object.values(h).some((v) => Number(v) !== 0));
     $("laneSaxo").innerHTML = `
-      <div class="lane-head"><div class="t">Saxo ナスダック3倍＋金</div><div class="v">${yen(s.equity_jpy)}</div></div>${laneDelta("saxo")}
+      <div class="lane-head"><div class="t">Saxo ナスダック3倍＋金</div><div class="v">${yen(s.equity_jpy)}</div></div>${laneDelta("saxo_etf")}
+      ${stopped ? '<div class="chips"><span class="pill warn">清算中/停止</span></div>' : ""}
       <div class="chips"><span class="chip">ナスダック 200日線 ${on === true ? '<span class="pos">上 ▲</span>' : on === false ? '<span class="neg">下 ▼</span>' : "—"}</span></div>
       <div class="kv">
         <div class="k">TQQQ（ナスダック3倍）</div><div class="v">${h["TQQQ:xnas"] ?? 0} 株</div>
         <div class="k">GLDM（金）</div><div class="v">${h["GLDM:arcx"] ?? 0} 株</div>
-        <div class="k">目標配分</div><div class="v">TQQQ 70% / 金 30%</div>
+        <div class="k">目標配分</div><div class="v">${stopped ? "清算・現金化" : "TQQQ 70% / 金 30%"}</div>
       </div>
-      <div class="note">200日線を下回るとTQQQを売却して現金化。発注は米国市場時間のみ。</div>`;
+      <div class="note">${stopped ? "新規買い停止。残りのETFを米国市場時間に清算します。" : "200日線を下回るとTQQQを売却して現金化。発注は米国市場時間のみ。"}</div>`;
   }
 
   function renderCopy(k) {
@@ -409,9 +421,50 @@ header>div{min-width:0} header .btn{padding:8px}
     const closes = (feed.events || []).filter((e) => e.lane === "gmo_copy" && e.leg === "CLOSE" && e.accepted);
     const pnl = k.realized_pnl_jpy ?? closes.reduce((t, e) => t + (e.realized_pnl_jpy || 0), 0);
     $("laneCopy").innerHTML = `
-      <div class="lane-head"><div class="t">OKX上位トレーダーのコピー</div><div class="v ${cls(pnl)}" style="font-size:15px">${signed(pnl)}</div></div>
-      <div class="kv"><div class="k">使える枠（証拠金維持率145%まで）</div><div class="v">${yen(k.budget_jpy)}</div>${rows}</div>
+      <div class="lane-head"><div class="t">GMO コピー（OKX上位トレーダー）</div><div class="v ${cls(pnl)}" style="font-size:15px">${signed(pnl)}</div></div>
+      <div class="kv"><div class="k">使える枠（上限10万円）</div><div class="v">${yen(k.budget_jpy)}</div>${rows}</div>
       <div class="note">OKXの上位トレーダーの新規建玉を5分ごとに集計し、銘柄ごとに1人1票の多数決の向きでGMOレバレッジを保有。票が消えれば決済。損益は確定分（約定ベース）。${(k.blockers || []).length ? " 制限: " + esc(k.blockers.join(" / ")) : ""}</div>${renderVariants()}`;
+  }
+
+  const number = (v) => Number.isFinite(v) ? v.toLocaleString("ja-JP", { maximumFractionDigits: 4 }) : "—";
+  const BLOCKERS = {
+    CFD_ACCOUNT_UNFUNDED: "CFD口座が未入金", US_SESSION_CLOSED_NO_ORDERS: "米国市場時間外",
+    COMMODITY_SESSION_CLOSED_NO_ORDERS: "商品市場時間外", SAXO_TOKEN_EXPIRED_OR_MISSING_NO_REFRESH: "Saxoの接続認証を確認してください",
+    SESSION_NOT_FULL_TRADING_NO_ORDERS: "Saxoの取引セッションが利用できません", UNKNOWN_OUTCOME_BLOCKED: "注文結果の確認待ち",
+    ORDER_OUTCOME_UNKNOWN: "注文結果が未確認", FAILED_POST_STOP: "発注失敗により停止",
+    KILL_SWITCH_OPEN_BLOCKED: "緊急停止により新規注文を停止", MARGIN_CLOSE_ALL: "証拠金不足のため全決済",
+    MARGIN_OPEN_BLOCKED: "証拠金不足で新規注文を停止", OPEN_GUARD_BLOCKED: "新規注文の条件未達",
+    FLIP_CLOSE_NOT_CONFIRMED: "反対売買前の決済確認待ち", COMMODITY_QUOTE_UNAVAILABLE: "商品の価格を取得できません",
+    HTTP400: "Saxo APIへの要求エラー", HTTP401: "Saxoの認証エラー", HTTP403: "Saxoのアクセス権限エラー",
+    CYCLE_ERROR: "データ取得・処理エラー", ORDER_REJECTED: "注文が拒否されました",
+    HTTP429_RATE_LIMITED_RETRY_NEXT_CYCLE: "API制限のため次回更新待ち"
+  };
+  const blockerText = (b) => BLOCKERS[String(b).split(":")[0]] || "取引条件を確認してください";
+  function renderSaxoCopy(k) {
+    const votes = k.votes || {}, targets = k.targets_jpy || {}, symbols = k.symbols || {};
+    const held = {};
+    for (const p of k.positions || []) {
+      const symbol = p.symbol || `UIC_${p.uic}`, h = held[symbol] ||= { amount: 0, pnl: 0, known: true };
+      h.amount += p.amount || 0;
+      h.known &&= Number.isFinite(p.unrealized_pnl_jpy);
+      h.pnl += p.unrealized_pnl_jpy || 0;
+    }
+    const keys = [...new Set([...Object.keys(votes), ...Object.keys(targets)])];
+    const rows = keys.map((key) => ({ key, symbol: symbols[key] || key }));
+    for (const symbol of Object.keys(held)) if (!rows.some((r) => r.symbol === symbol)) rows.push({ symbol });
+    const table = rows.map(({ key, symbol }) => {
+      const p = held[symbol], pnl = p ? (p.known ? p.pnl : null) : 0;
+      return `<tr><td>${esc(symbol)}</td><td>${number(votes[key] ?? 0)}</td><td>${yen(targets[key] ?? 0)}</td><td>${p ? number(p.amount) : "なし"}</td><td class="${cls(pnl)}">${signed(pnl)}</td></tr>`;
+    }).join("");
+    $("laneSaxoCopy").innerHTML = `<div class="lane-head"><div class="t">Saxo 株・商品コピー（OKX上位トレーダー）</div></div>
+      <div class="kv"><div class="k">CFD口座評価額</div><div class="v">${yen(k.account_value_jpy)}</div>
+      <div class="k">運用予算</div><div class="v">${yen(k.budget_jpy)}</div>
+      <div class="k">含み損益</div><div class="v ${cls(k.unrealized_pnl_jpy)}">${signed(k.unrealized_pnl_jpy)}</div>
+      <div class="k">確定損益（台帳の記録分）</div><div class="v ${cls(k.realized_pnl_jpy)}">${signed(k.realized_pnl_jpy)}</div>
+      <div class="k">証拠金使用率</div><div class="v">${k.margin_utilization_pct == null ? "—" : number(k.margin_utilization_pct) + "%"}</div></div>
+      ${table ? `<table class="variants copy-votes" aria-label="Saxoコピーの投票と保有"><thead><tr><th>銘柄</th><th>票</th><th>目標</th><th>保有</th><th>含み損益</th></tr></thead><tbody>${table}</tbody></table>` : '<div class="empty">投票・保有データなし</div>'}
+      <div class="note">1人1票の純票数で米国株・商品CFDへ配分。5分ごとに更新。保有の＋は買い、−は売り。確定損益の「—」は未取得です。</div>
+      ${(k.blockers || []).length ? `<div class="note warn">${k.blockers.map((b) => esc(blockerText(b))).join(" / ")}</div>` : ""}`;
   }
 
   function renderCodex(tasks) {
@@ -423,10 +476,10 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   function renderArb(a) {
-    const TH = 20, rows = [];
+    const TH = 30, rows = [];
     const f = { ...(a.forward_edges_bps || {}) }, r = a.reverse_edges_bps || {}, cv = a.covered_edges_bps || {};
-    // BTC/ETH/XRP use the trend's own spot (no spot fees, 15 bp): shift onto the common 20 bp scale
-    for (const [k, v] of Object.entries(cv)) f[k] = Math.max(f[k] ?? -1e9, v + 5);
+    // Show actual edges against the current taker entry threshold.
+    for (const [k, v] of Object.entries(cv)) f[k] = Math.max(f[k] ?? -1e9, v);
     const coins = [...new Set([...Object.keys(f), ...Object.keys(r)])];
     const scale = 40;
     const bar = (v) => {
@@ -437,7 +490,7 @@ header>div{min-width:0} header .btn{padding:8px}
     };
     for (const k of coins) {
       const best = Math.max(f[k] ?? -1e9, r[k] ?? -1e9);
-      const label = best <= -1e8 ? "—" : best >= TH ? `${best.toFixed(1)} bp 建玉可` : best > 0 ? `${best.toFixed(1)} bp` : "機会なし";
+      const label = best <= -1e8 ? "—" : best >= TH ? `${best.toFixed(1)} bp 基準以上` : best > 0 ? `${best.toFixed(1)} bp` : "機会なし";
       rows.push(`<div class="bar"><span>${esc(k)}</span>${bar(best)}<span class="${best >= TH ? "pos" : "muted"}" style="text-align:right;font-size:11px">${label}</span></div>`);
     }
     const open = [...Object.entries(a.open_forward || {}).map(([k, p]) => `順 ${esc(k)} ${p.entry_bps?.toFixed?.(1) ?? ""}bp`),
@@ -448,38 +501,38 @@ header>div{min-width:0} header .btn{padding:8px}
     $("laneArb").innerHTML = `
       <div class="lane-head"><div class="t">GMO 現物⇄レバレッジ 価格差</div><div class="v" style="font-size:15px">${open.length ? open.length + "件 建玉中" : '<span class="muted">待機中</span>'}</div></div>
       <div class="kv"><div class="k">決済済み</div><div class="v">${closes.length} 回</div><div class="k">損益の合計（約定ベース／一部推定）</div><div class="v ${cls(arbPnl)}">${closes.length ? signed(arbPnl) : "—"}</div></div>
-      <div class="note">各銘柄で今取引した場合の利ざや（順・逆の良い方、スプレッド込み）。黄色の線 = 建玉基準（BTC・ETH・XRP はトレンドの現物を使うため手数料が安く、15bp で建てる分を上乗せ表示）。マイナスは取引すると損をする状態で、「機会なし」と表示。</div>
+      <div class="note">各銘柄の価格差（順・逆・現物活用の最大値、スプレッド込み）。黄色の線＝成行側の建玉基準30bp。指値で待つ新規建玉は停止中。基準以上でも他の発注条件を満たす必要があります。</div>
       <div class="bars">${rows.join("") || '<div class="empty">データなし</div>'}</div>
       ${open.length ? `<div class="chips">${open.map((o) => `<span class="chip">${o}</span>`).join("")}</div>` : ""}`;
   }
 
-  const LANE = { gmo_crypto_trend: ["暗号", "₿"], gmo_basis_arb: ["価格差", "⇄"], saxo_etf_trend: ["Saxo", "S"], gmo_copy: ["コピー", "⧉"] };
+  const LANE = { gmo_crypto_trend: ["暗号", "₿"], gmo_basis_arb: ["価格差", "⇄"], saxo_etf_trend: ["Saxo ETF", "S"], saxo_copy: ["Saxoコピー", "⧉"], gmo_copy: ["GMOコピー", "⧉"] };
   function renderEvents(evs) {
     const list = evs.filter((e) => !evLane || e.lane === evLane).slice().reverse().slice(0, 60);
     $("events").innerHTML = list.map((e) => {
       const [ln, ic] = LANE[e.lane] || [e.lane, "•"];
-      const what = e.leg || e.kind || "";
+      const what = e.leg || e.op || e.kind || "";
       const sym = e.symbol || e.coin || "";
       const failed = e.accepted === false || e.known === false || e.outcome_known === false;
       const pnl = e.est_pnl_jpy ?? e.realized_pnl_jpy;
       const amt = pnl != null ? `<span class="${cls(pnl)}">${signed(pnl)}</span>` : e.notional_jpy != null ? yen(e.notional_jpy) : "";
-      const desc = /CLOSED/.test(what) || (what === "CLOSE" && e.lane === "gmo_copy") ? "決済" : failed ? "失敗・要確認" : `${what} ${e.side || ""} ${e.size ?? e.amount ?? ""}`;
+      const desc = /CLOSED/.test(what) || (what === "CLOSE" && ["gmo_copy", "saxo_copy"].includes(e.lane)) ? "決済" : failed ? "失敗・要確認" : `${what} ${e.side || ""} ${e.size ?? e.amount ?? ""}`;
       return `<div class="ev"><div class="ic">${ic}</div><div><div>${esc(ln)} ・ ${esc(sym)} ・ <span class="${failed ? "neg" : ""}">${esc(desc)}</span></div><div class="sub">${jst(e.at)}${e.est_pnl_bps != null ? ` ・ ${e.est_pnl_bps}bp` : ""}</div></div><div class="amt">${amt}</div></div>`;
     }).join("") || '<div class="empty">まだ取引はありません</div>';
   }
 
   function renderHealth(f) {
     const L = f.lanes, rows = [
-      ["GMO 暗号トレンド", L.gmo_crypto_trend, 45], ["Saxo ETF", L.saxo_etf_trend, 45], ["コピー売買", L.gmo_copy, 15], ["価格差", L.gmo_basis_arb, 5],
+      ["GMO 暗号トレンド", L.gmo_crypto_trend, 45], ["Saxo ETF", L.saxo_etf_trend, 45], ["GMOコピー", L.gmo_copy, 15], ["Saxo 株・商品コピー", L.saxo_copy, 15], ["価格差", L.gmo_basis_arb, 5],
     ];
     const wd = f.watchdog || {}, wdFail = Object.entries(wd.failing || {});
     const wdRow = `<div class="hrow"><div>見張り役（5分ごと）<div class="sub muted" style="font-size:11px">${wd.generated_at ? esc(wdFail.map(([k, v]) => k + ": " + v).join(" / ") || "ネットワーク・ジョブ・証拠金・disk すべて正常") + " ・ " + jst(wd.generated_at) : "未取得"}</div></div><span class="pill ${!wd.generated_at ? "warn" : wdFail.length ? "bad" : "ok"}">${!wd.generated_at ? "—" : wdFail.length ? wdFail.length + "件 異常" : "正常"}</span></div>`;
     $("health").innerHTML = wdRow + rows.map(([name, l, maxAge]) => {
       l = l || {};
       const age = ageMin(l.updated_at), okStatus = String(l.status || "").startsWith("OK");
-      const blockers = [...(l.blockers || []), ...(l.entry_blockers || [])].filter((b) => !/US_SESSION_CLOSED/.test(b));
-      const state = !okStatus ? ["bad", "エラー"] : age > maxAge ? ["warn", `更新${Math.round(age)}分前`] : blockers.length ? ["warn", "制限あり"] : ["ok", "正常"];
-      return `<div class="hrow"><div>${name}<div class="sub muted" style="font-size:11px">${esc(blockers.join(" / ") || jst(l.updated_at))}</div></div><span class="pill ${state[0]}">${state[1]}</span></div>`;
+      const blockers = [...(l.blockers || []), ...(l.entry_blockers || [])].filter((b) => !/^(US|COMMODITY)_SESSION_CLOSED/.test(b));
+      const state = !Number.isFinite(age) || age < 0 ? ["warn", "未取得"] : age > maxAge ? ["warn", `更新${Math.round(age)}分前`] : !okStatus && l.status !== "BLOCKED" ? ["bad", "エラー"] : blockers.length ? ["warn", "制限あり"] : ["ok", "正常"];
+      return `<div class="hrow"><div>${name}<div class="sub muted" style="font-size:11px">${esc(blockers.map(blockerText).join(" / ") || jst(l.updated_at))}</div></div><span class="pill ${state[0]}">${state[1]}</span></div>`;
     }).join("") + [["copy", "コピーシグナル収集", 20], ["xex", "取引所間価格収集", 5], ["fx_sentiment", "FXセンチメント収集", 40]].map(([key, name, limit]) => {
       const c = f.collectors?.[key] || {}, age = ageMin(c.generated_at);
       const known = Number.isFinite(age) && age >= 0;
