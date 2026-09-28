@@ -119,7 +119,7 @@ header>div{min-width:0} header .btn{padding:8px}
   <section class="card hero">
     <div class="label">合計評価額</div>
     <div class="big" id="total">—</div>
-    <div class="note">残高増減（入出金・口座の集計範囲変更を含む／運用損益ではありません）</div>
+    <div class="note">増減（確認済みの入金を除く）</div>
     <div class="deltas">
       <div class="delta"><div class="k">24時間</div><div class="v" id="d24">—</div></div>
       <div class="delta"><div class="k">7日</div><div class="v" id="d7">—</div></div>
@@ -144,7 +144,7 @@ header>div{min-width:0} header .btn{padding:8px}
     <div class="chart"><svg id="pnlChart" role="img" aria-label="戦略別の累計損益（円）"></svg></div>
     <div class="legend" id="pnlLegend"></div>
     <div class="pnl-values" id="pnlValues"></div>
-    <div class="note">GMOコピー：確定損益のみ。Saxoコピー：確定損益（台帳の記録分）＋含み損益。確定分未取得時は含み損益のみ。価格差：決済損益（約定ベース、一部推定）。GMO口座は入出金がないため評価額の増減＝損益。Saxo ETF口座はCFD口座へ振替中のため損益線なし。残高増減を損益線として描画しません。各戦略の数値は口座全体の損益ではありません。</div>
+    <div class="note">GMO口座全体：評価額の増減（入出金なし＝損益、トレンド・コピー・価格差を含む）。GMOコピー：確定損益のみ。Saxoコピー：確定損益（台帳の記録分）＋含み損益。確定分未取得時は含み損益のみ。価格差：決済損益（約定ベース、一部推定）。GMO口座は入出金がないため評価額の増減＝損益。Saxo ETF口座はCFD口座へ振替中のため損益線なし。残高増減を損益線として描画しません。各戦略の数値は口座全体の損益ではありません。</div>
   </section>
 
   <h2>口座・戦略の状況</h2>
@@ -240,7 +240,8 @@ header>div{min-width:0} header .btn{padding:8px}
     const cutoff = hours ? new Date(last.t).getTime() - hours * 3600e3 : -Infinity;
     const base = hours ? hist.find((h) => new Date(h.t).getTime() >= cutoff) : hist[0];
     if (!base || base === last && hours) return null;
-    return { d: last.total - base.total, p: base.total ? (last.total - base.total) / base.total : null };
+    return { d: last.total - base.total, p: base.total ? (last.total - base.total) / base.total : null,
+             base: base.total, baseT: base.t };
   }
 
   function renderHousehold(h) {
@@ -269,10 +270,17 @@ header>div{min-width:0} header .btn{padding:8px}
     p.className = "pill " + (age < 90 ? "ok" : age < 240 ? "warn" : "bad");
     p.textContent = age < 90 ? "最新" : `データが${Math.round(age / 60)}時間前`;
     $("total").textContent = yen(f.total_equity_jpy);
+    // Change over the window, excluding owner-confirmed deposits dated inside it, with a percentage.
+    const flows = (f.capital_changes?.events || []);
     [["d24", 24], ["d7", 168], ["dAll", 0]].forEach(([id, h]) => {
       const c = changeSince(hist, h), el = $(id);
-      el.className = "v muted";
-      el.textContent = c ? signed(c.d) : "—";
+      if (!c) { el.className = "v muted"; el.textContent = "—"; return; }
+      const fromDay = new Date(c.baseT).toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
+      const dep = flows.filter((e) => e.date_jst >= fromDay).reduce((a, e) => a + (e.amount_jpy || 0), 0);
+      const d = c.d - dep, pct = c.base ? d / c.base * 100 : null;
+      el.className = "v " + cls(d);
+      el.innerHTML = `${signed(d)}${pct == null ? "" : `<div style="font-size:12px">(${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%)</div>`}` +
+        (dep ? `<div class="muted" style="font-size:10px">入金${yen(dep)}を除く</div>` : "");
     });
     renderCapitalChanges(f.capital_changes || {});
     drawChart(hist);
@@ -333,7 +341,7 @@ header>div{min-width:0} header .btn{padding:8px}
   const PNL_LANES = [
     ["gmo_copy", "GMOコピー", "var(--c1)"], ["gmo_basis_arb", "価格差", "var(--warn)"],
     ["saxo_copy", "Saxoコピー（確定＋含み）", "var(--pos)"],
-
+    ["gmo_crypto_trend", "GMO口座全体（トレンド含む）", "var(--c2)"],
   ];
   function drawPnlChart() {
     const svg = $("pnlChart"), W = svg.clientWidth || 340, H = 220;
