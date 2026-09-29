@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trading Observatory</title>
 <meta name="theme-color" content="#0b0f14">
+<meta name="build" content="20260929124546">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
@@ -600,6 +601,19 @@ header>div{min-width:0} header .btn{padding:8px}
     try { localStorage.setItem("obsPage", p); } catch (e) {}
     window.dispatchEvent(new Event("resize"));
   };
+  const checkUpdate = async () => {
+    try {
+      const mine = document.querySelector('meta[name="build"]')?.content;
+      const r = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" });
+      const m = (await r.text()).match(/<meta name="build" content="([^"]+)"/);
+      if (mine && m && m[1] !== mine && sessionStorage.getItem("obsReload") !== m[1]) {
+        sessionStorage.setItem("obsReload", m[1]);
+        location.reload();
+      }
+    } catch (e) {}
+  };
+  checkUpdate();
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) checkUpdate(); });
   document.querySelectorAll("#pageTabs button").forEach((b) => b.onclick = () => showPage(b.dataset.p));
   try { const sp = localStorage.getItem("obsPage"); if (sp && document.getElementById("page-" + sp)) showPage(sp); } catch (e) {}
   document.querySelectorAll("#rangeTabs button").forEach((b) => b.onclick = () => {
