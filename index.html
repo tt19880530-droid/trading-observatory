@@ -89,6 +89,8 @@ input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--lin
 .note{font-size:12px;color:var(--muted);margin-top:10px}
 .grid>*{min-width:0}
 .tabs{max-width:100%;flex-wrap:wrap}
+.pagetabs{width:100%;margin:16px 0 0}.pagetabs button{flex:1;padding:9px 6px;font-size:14px}
+.page[hidden]{display:none}
 header>div{min-width:0} header .btn{padding:8px}
 .hrow>div{min-width:0;overflow-wrap:anywhere}
 .hrow>.pill{flex-shrink:0;align-self:flex-start}
@@ -128,6 +130,11 @@ header>div{min-width:0} header .btn{padding:8px}
     <div id="capitalChanges"></div>
   </section>
 
+  <nav class="tabs pagetabs" id="pageTabs" aria-label="表示切替">
+    <button data-p="overview" class="on">概要</button><button data-p="orders">注文履歴</button><button data-p="household">家計</button><button data-p="ops">運用</button>
+  </nav>
+
+  <div class="page" id="page-overview">
   <h2>評価額の推移</h2>
   <section class="card">
     <div class="tabs" id="rangeTabs">
@@ -159,20 +166,26 @@ header>div{min-width:0} header .btn{padding:8px}
   <div class="grid">
     <section class="card" id="laneArb"></section>
   </div>
+  </div>
 
+  <div class="page" id="page-household" hidden>
   <h2>家計</h2>
   <section class="card" id="household"><div class="empty">明細CSVを data/household/inbox に置くと表示されます</div></section>
+  </div>
 
-  <h2>Codex の作業</h2>
-  <section class="card" id="codex"></section>
-
-  <h2>取引・イベント</h2>
+  <div class="page" id="page-orders" hidden>
+  <h2>注文履歴・イベント</h2>
   <section class="card">
     <div class="tabs" id="evTabs">
       <button data-l="" class="on">すべて</button><button data-l="gmo_crypto_trend">暗号トレンド</button><button data-l="gmo_copy">GMOコピー</button><button data-l="gmo_basis_arb">価格差</button><button data-l="saxo_etf_trend">Saxo ETF</button><button data-l="saxo_copy">Saxoコピー</button>
     </div>
     <div class="events" id="events" style="margin-top:12px"></div>
   </section>
+  </div>
+
+  <div class="page" id="page-ops" hidden>
+  <h2>Codex の作業</h2>
+  <section class="card" id="codex"></section>
 
   <h2>稼働状況</h2>
   <section class="card health" id="health"></section>
@@ -186,6 +199,7 @@ header>div{min-width:0} header .btn{padding:8px}
     <details><summary>Saxo ETF（清算中）</summary><p>ナスダック3倍ETF（TQQQ）と金ETF（GLDM）は清算中。米国市場時間に残りの保有を売却し、新規買いは停止しています。</p></details>
     <details><summary>Saxo 株・商品コピー（OKX上位トレーダー）</summary><p>OKX上位トレーダーの米国株・商品の建玉を5分ごとに集計。銘柄ごとに1人1票、買いを＋1・売りを−1として差し引き、純票数に応じて予算を配分します。分母は純票数の絶対値の合計と4の大きい方で、票が少ないと予算の一部だけを使います。SaxoのCFD（差金決済取引）で追随し、株と商品それぞれの市場時間に発注します。</p></details>
   </section>
+  </div>
 </div>
 
 <dialog id="settings">
@@ -575,6 +589,14 @@ header>div{min-width:0} header .btn{padding:8px}
     }).join("");
   }
 
+  const showPage = (p) => {
+    document.querySelectorAll(".page").forEach((el) => { el.hidden = el.id !== "page-" + p; });
+    document.querySelectorAll("#pageTabs button").forEach((x) => x.classList.toggle("on", x.dataset.p === p));
+    try { localStorage.setItem("obsPage", p); } catch (e) {}
+    window.dispatchEvent(new Event("resize"));
+  };
+  document.querySelectorAll("#pageTabs button").forEach((b) => b.onclick = () => showPage(b.dataset.p));
+  try { const sp = localStorage.getItem("obsPage"); if (sp && document.getElementById("page-" + sp)) showPage(sp); } catch (e) {}
   document.querySelectorAll("#rangeTabs button").forEach((b) => b.onclick = () => {
     document.querySelectorAll("#rangeTabs button").forEach((x) => x.classList.toggle("on", x === b));
     range = +b.dataset.r; if (feed) { drawChart(feed.equity_history || []); drawPnlChart(); }
