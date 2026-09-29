@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trading Observatory</title>
 <meta name="theme-color" content="#0b0f14">
-<meta name="build" content="20260929131500">
+<meta name="build" content="20260929150000">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
@@ -13,16 +13,19 @@
 :root{
   --bg:#0b0f14;--panel:#121821;--panel2:#18202b;--line:#233042;--text:#e6edf5;--muted:#8a9bb0;
   --accent:#5eead4;--pos:#34d399;--neg:#f87171;--warn:#fbbf24;--c1:#5eead4;--c2:#a78bfa;--c3:#60a5fa;
+  --k-total:#f1f5f9;--k-gmo:#60a5fa;--k-saxo:#fb923c;--k-copy:#4ade80;--k-arb:#c084fc;
   --radius:16px;--gap:14px;color-scheme:dark;
   --sans:"IBM Plex Sans JP",-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
 }
 @media (prefers-color-scheme:light){:root:not([data-theme="dark"]){color-scheme:light;
   --bg:#f4f6f8;--panel:#ffffff;--panel2:#eef2f6;--line:#dbe2ea;--text:#0e1726;--muted:#586a80;
-  --accent:#0f8f82;--pos:#08875f;--neg:#c2362f;--warn:#a35d06;--c1:#0f8f82;--c2:#6d4bd6;--c3:#2563c9;}}
+  --accent:#0f8f82;--pos:#08875f;--neg:#c2362f;--warn:#a35d06;--c1:#0f8f82;--c2:#6d4bd6;--c3:#2563c9;
+  --k-total:#0e1726;--k-gmo:#2563c9;--k-saxo:#d9600a;--k-copy:#15803d;--k-arb:#9333ea;}}
 :root[data-theme="light"]{color-scheme:light;
   --bg:#f4f6f8;--panel:#ffffff;--panel2:#eef2f6;--line:#dbe2ea;--text:#0e1726;--muted:#586a80;
-  --accent:#0f8f82;--pos:#08875f;--neg:#c2362f;--warn:#a35d06;--c1:#0f8f82;--c2:#6d4bd6;--c3:#2563c9;}
+  --accent:#0f8f82;--pos:#08875f;--neg:#c2362f;--warn:#a35d06;--c1:#0f8f82;--c2:#6d4bd6;--c3:#2563c9;
+  --k-total:#0e1726;--k-gmo:#2563c9;--k-saxo:#d9600a;--k-copy:#15803d;--k-arb:#9333ea;}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
 .wrap{max-width:980px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 16px 96px}
@@ -148,7 +151,7 @@ header>div{min-width:0} header .btn{padding:8px}
     </div>
     <div class="chart"><svg id="chart"></svg><div class="tip" id="tip"></div></div>
     <div class="note">口座残高の推移です。入出金・振替や集計対象の追加による段差も含みます。</div>
-    <div class="legend"><span><i style="background:var(--c1)"></i>合計</span><span><i style="background:var(--c3)"></i>GMO暗号</span><span><i style="background:var(--c2)"></i>Saxo</span></div>
+    <div class="legend"><span><i style="background:var(--k-total)"></i>合計</span><span><i style="background:var(--k-gmo)"></i>GMO口座</span><span><i style="background:var(--k-saxo)"></i>Saxo口座</span></div>
   </section>
 
   <h2>戦略別の損益</h2>
@@ -296,7 +299,9 @@ header>div{min-width:0} header .btn{padding:8px}
       const c = changeSince(hist, h), el = $(id);
       if (!c) { el.className = "v muted"; el.textContent = "—"; return; }
       const fromDay = new Date(c.baseT).toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
-      const dep = flows.filter((e) => e.date_jst >= fromDay).reduce((a, e) => a + (e.amount_jpy || 0), 0);
+      // a deposit with a known landing time counts only if it landed after the baseline snapshot
+      const dep = flows.filter((e) => e.at ? new Date(e.at) > new Date(c.baseT) : e.date_jst >= fromDay)
+        .reduce((a, e) => a + (e.amount_jpy || 0), 0);
       const d = c.d - dep, pct = c.base ? d / c.base * 100 : null;
       el.className = "v " + cls(d);
       el.innerHTML = `${signed(d)}${pct == null ? "" : `<div style="font-size:12px">(${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%)</div>`}` +
@@ -331,7 +336,7 @@ header>div{min-width:0} header .btn{padding:8px}
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     if (pts.length < 2) { svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" fill="currentColor" opacity=".5" font-size="13">データがたまるとグラフが表示されます</text>`; return; }
     const xs = pts.map((h) => new Date(h.t).getTime()), x0 = xs[0], x1 = xs[xs.length - 1];
-    const series = [["total", "var(--c1)", 2.2], ["gmo_crypto", "var(--c3)", 1.5], ["saxo", "var(--c2)", 1.5]];
+    const series = [["total", "var(--k-total)", 2.4], ["gmo_crypto", "var(--k-gmo)", 1.8], ["saxo", "var(--k-saxo)", 1.8]];
     const all = pts.flatMap((h) => series.map(([k]) => h[k]).filter((v) => v != null));
     let lo = Math.min(...all), hi = Math.max(...all); const pad = (hi - lo) * 0.08 || hi * 0.01 || 1; lo -= pad; hi += pad;
     const X = (t) => P.l + (t - x0) / (x1 - x0 || 1) * (W - P.l - P.r);
@@ -359,9 +364,9 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   const PNL_LANES = [
-    ["gmo_copy", "GMOコピー", "var(--c1)"], ["gmo_basis_arb", "価格差", "var(--warn)"],
-    ["saxo_copy", "Saxoコピー（確定＋含み）", "var(--pos)"],
-    ["gmo_crypto_trend", "GMO口座全体（トレンド含む）", "var(--c2)"],
+    ["gmo_copy", "GMOコピー", "var(--k-copy)"], ["gmo_basis_arb", "価格差", "var(--k-arb)"],
+    ["saxo_copy", "Saxoコピー（確定＋含み）", "var(--k-saxo)"],
+    ["gmo_crypto_trend", "GMO口座全体（トレンド含む）", "var(--k-gmo)"],
   ];
   function drawPnlChart() {
     const svg = $("pnlChart"), W = svg.clientWidth || 340, H = 220;
