@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trading Observatory</title>
 <meta name="theme-color" content="#0b0f14">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
 <style>
@@ -89,7 +90,11 @@ input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--lin
 .note{font-size:12px;color:var(--muted);margin-top:10px}
 .grid>*{min-width:0}
 .tabs{max-width:100%;flex-wrap:wrap}
-.pagetabs{width:100%;margin:16px 0 0}.pagetabs button{flex:1;padding:9px 6px;font-size:14px}
+.pagetabs{width:100%;margin:16px 0 0;position:sticky;top:max(8px,env(safe-area-inset-top));z-index:5;box-shadow:0 6px 14px -8px rgba(0,0,0,.5)}.pagetabs button{flex:1;padding:11px 6px;font-size:14px;min-height:44px}
+.tabs button{min-height:36px}
+@media(max-width:480px){.hero .big{font-size:32px}.deltas{gap:6px}.delta{padding:8px}.delta .v{font-size:12px}.card{padding:14px}h2{margin-top:22px}.btn{min-height:40px}}
+.wrap{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+body{overflow-x:hidden}
 .page[hidden]{display:none}
 header>div{min-width:0} header .btn{padding:8px}
 .hrow>div{min-width:0;overflow-wrap:anywhere}
@@ -294,7 +299,7 @@ header>div{min-width:0} header .btn{padding:8px}
       const d = c.d - dep, pct = c.base ? d / c.base * 100 : null;
       el.className = "v " + cls(d);
       el.innerHTML = `${signed(d)}${pct == null ? "" : `<div style="font-size:12px">(${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%)</div>`}` +
-        (dep ? `<div class="muted" style="font-size:10px">入金${yen(dep)}を除く</div>` : "");
+        (dep ? `<div class="muted" style="font-size:10px">入金除く</div>` : "");
     });
     renderCapitalChanges(f.capital_changes || {});
     drawChart(hist);
