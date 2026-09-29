@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trading Observatory</title>
 <meta name="theme-color" content="#0b0f14">
-<meta name="build" content="20260929124546">
+<meta name="build" content="20260929131500">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
@@ -470,7 +470,7 @@ header>div{min-width:0} header .btn{padding:8px}
     const pnl = k.realized_pnl_jpy ?? closes.reduce((t, e) => t + (e.realized_pnl_jpy || 0), 0);
     $("laneCopy").innerHTML = `
       <div class="lane-head"><div class="t">GMO コピー（OKX上位トレーダー）</div><div class="v ${cls(pnl)}" style="font-size:15px">${signed(pnl)}</div></div>
-      <div class="kv"><div class="k">使える枠（上限10万円）</div><div class="v">${yen(k.budget_jpy)}</div>${rows}</div>
+      <div class="kv"><div class="k">使える枠（上限 ${yen(k.cap_jpy ?? 100000)}＝10万円＋確定損益）</div><div class="v">${yen(k.budget_jpy)}</div>${rows}</div>
       <div class="note">OKXの上位トレーダーの新規建玉を5分ごとに集計し、銘柄ごとに1人1票の多数決の向きでGMOレバレッジを保有。票が消えれば決済。損益は確定分（約定ベース）。${(k.blockers || []).length ? " 制限: " + esc(k.blockers.join(" / ")) : ""}</div>${renderVariants()}`;
   }
 
