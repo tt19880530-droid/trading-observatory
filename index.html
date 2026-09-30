@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trading Observatory</title>
 <meta name="theme-color" content="#0b0f14">
-<meta name="build" content="20260929150000">
+<meta name="build" content="20260930083000">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
@@ -92,6 +92,18 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
 label{display:block;font-size:12px;color:var(--muted);margin:12px 0 4px}
 input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font:inherit}
 .note{font-size:12px;color:var(--muted);margin-top:10px}
+.cal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.cal-nav{display:flex;align-items:center;gap:6px}.cal-nav .m{font-weight:700;min-width:6.5em;text-align:center;font-variant-numeric:tabular-nums}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;margin-top:10px}
+.cal .w{font-size:11px;color:var(--muted);text-align:center;padding:2px 0}
+.cal .c{position:relative;min-height:54px;border-radius:8px;background:var(--panel2);padding:3px 4px;text-align:right;border:1px solid transparent;font:inherit;color:var(--text);cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;overflow:hidden}
+.cal .c.blank{background:transparent;cursor:default}.cal .c.none{opacity:.55}
+.cal .c .n{font-size:10px;color:var(--muted);align-self:flex-start}
+.cal .c .a{font-family:var(--mono);font-size:10.5px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.03em;white-space:nowrap}
+.cal .c.sel{border-color:var(--accent)}.cal .c.today .n{color:var(--accent);font-weight:700}
+.cal-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.cal-sum>div{background:var(--panel2);border-radius:12px;padding:8px 10px;min-width:0}
+.cal-sum .k{color:var(--muted);font-size:11px}.cal-sum .v{font-family:var(--mono);font-weight:600;font-size:13px;font-variant-numeric:tabular-nums}
 .grid>*{min-width:0}
 .tabs{max-width:100%;flex-wrap:wrap}
 .pagetabs{width:100%;margin:16px 0 0;position:sticky;top:max(8px,env(safe-area-inset-top));z-index:5;box-shadow:0 6px 14px -8px rgba(0,0,0,.5)}.pagetabs button{flex:1;padding:11px 6px;font-size:14px;min-height:44px}
@@ -152,6 +164,18 @@ header>div{min-width:0} header .btn{padding:8px}
     <div class="chart"><svg id="chart"></svg><div class="tip" id="tip"></div></div>
     <div class="note">口座残高の推移です。入出金・振替や集計対象の追加による段差も含みます。</div>
     <div class="legend"><span><i style="background:var(--k-total)"></i>合計</span><span><i style="background:var(--k-gmo)"></i>GMO口座</span><span><i style="background:var(--k-saxo)"></i>Saxo口座</span></div>
+  </section>
+
+  <h2>日ごとの損益</h2>
+  <section class="card" id="calCard">
+    <div class="cal-head">
+      <div class="tabs" id="calMode"><button data-m="day" class="on">日次</button><button data-m="cum">累計</button></div>
+      <div class="cal-nav"><button class="btn" id="calPrev" aria-label="前の月">‹</button><span class="m" id="calMonth"></span><button class="btn" id="calNext" aria-label="次の月">›</button></div>
+    </div>
+    <div class="cal-sum" id="calSum"></div>
+    <div class="cal" id="calGrid"></div>
+    <div id="calDetail" class="kv"></div>
+    <div class="note">日本時間の日付ごとに、その日の最後の残高 − 前日の最後の残高（入金・出金は除外）。評価損益を含みます。最初の日と今日は途中までの集計です。</div>
   </section>
 
   <h2>戦略別の損益</h2>
@@ -309,6 +333,7 @@ header>div{min-width:0} header .btn{padding:8px}
     });
     renderCapitalChanges(f.capital_changes || {});
     drawChart(hist);
+    drawCalendar();
     drawPnlChart();
     renderCrypto(f.lanes.gmo_crypto_trend || {});
     renderSaxo(f.lanes.saxo_etf_trend || {});
@@ -319,6 +344,72 @@ header>div{min-width:0} header .btn{padding:8px}
     renderEvents(f.events || []);
     renderHealth(f);
     renderHousehold(f.household);
+  }
+
+  let calMonth = null, calMode = "day", calSel = null;
+  const dayKey = (t) => new Date(t).toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
+  function dailyPnl(f) {
+    const hist = f.equity_history || [], flows = f.capital_changes?.events || [];
+    const eod = new Map();
+    hist.forEach((h) => eod.set(dayKey(h.t), h));
+    const dep = {};
+    flows.forEach((e) => {
+      const d = e.at ? dayKey(e.at) : e.date_jst, o = (dep[d] ||= { total: 0, gmo: 0, saxo: 0 });
+      o.total += e.amount_jpy || 0; o[e.account === "saxo" ? "saxo" : "gmo"] += e.amount_jpy || 0;
+    });
+    const out = {}; let prev = hist[0], cum = 0;
+    [...eod.keys()].sort().forEach((d, i) => {
+      const cur = eod.get(d), dp = dep[d] || { total: 0, gmo: 0, saxo: 0 };
+      const diff = (a, b, x) => a == null || b == null ? null : a - b - x;
+      const total = diff(cur.total, prev.total, dp.total);
+      cum += total || 0;
+      out[d] = { total, gmo: diff(cur.gmo_crypto, prev.gmo_crypto, dp.gmo), saxo: diff(cur.saxo, prev.saxo, dp.saxo),
+                 dep: dp.total, cum, partial: i === 0 };
+      prev = cur;
+    });
+    return out;
+  }
+  function shortYen(v) {
+    if (v == null) return "";
+    const a = Math.abs(Math.round(v)), sg = v < 0 ? "−" : "+";
+    return a >= 100000 ? sg + (a / 10000).toFixed(1) + "万" : sg + a.toLocaleString("ja-JP");
+  }
+  function drawCalendar() {
+    if (!feed) return;
+    const days = dailyPnl(feed), keys = Object.keys(days).sort();
+    if (!keys.length) { $("calGrid").innerHTML = '<div class="empty" style="grid-column:1/-1">データがありません</div>'; return; }
+    const today = dayKey(Date.now());
+    if (!calMonth) calMonth = keys[keys.length - 1].slice(0, 7);
+    const [Y, M] = calMonth.split("-").map(Number);
+    $("calMonth").textContent = `${Y}年${M}月`;
+    $("calPrev").disabled = calMonth <= keys[0].slice(0, 7);
+    $("calNext").disabled = calMonth >= keys[keys.length - 1].slice(0, 7);
+    const dim = new Date(Y, M, 0).getDate(), lead = (new Date(Y, M - 1, 1).getDay() + 6) % 7;
+    const mk = (d) => `${calMonth}-${String(d).padStart(2, "0")}`;
+    const val = (k) => days[k] ? (calMode === "cum" ? days[k].cum : days[k].total) : null;
+    const inMonth = keys.filter((k) => k.startsWith(calMonth));
+    const max = Math.max(1, ...inMonth.map((k) => Math.abs(val(k) ?? 0)));
+    const sum = inMonth.reduce((a, k) => a + (days[k].total || 0), 0);
+    const wins = inMonth.filter((k) => (days[k].total || 0) > 0).length, loss = inMonth.filter((k) => (days[k].total || 0) < 0).length;
+    $("calSum").innerHTML = `<div><div class="k">月間の損益</div><div class="v ${cls(sum)}">${signed(sum)}</div></div>` +
+      `<div><div class="k">勝ち日 / 負け日</div><div class="v">${wins} / ${loss}</div></div>` +
+      `<div><div class="k">${calMode === "cum" ? "月末の累計" : "1日の最大/最小"}</div><div class="v">${calMode === "cum"
+        ? `<span class="${cls(days[inMonth[inMonth.length - 1]]?.cum)}">${signed(days[inMonth[inMonth.length - 1]]?.cum)}</span>`
+        : (() => { const v = inMonth.map((k) => days[k].total || 0); return `<span class="pos">${shortYen(Math.max(...v, 0))}</span> / <span class="neg">${shortYen(Math.min(...v, 0))}</span>`; })()}</div></div>`;
+    let g = ["月", "火", "水", "木", "金", "土", "日"].map((w) => `<div class="w">${w}</div>`).join("") + '<div class="c blank"></div>'.repeat(lead);
+    for (let d = 1; d <= dim; d++) {
+      const k = mk(d), v = val(k), has = v != null;
+      const bg = !has || v === 0 ? "" : `background:color-mix(in srgb, var(--${v > 0 ? "pos" : "neg"}) ${Math.round(14 + 46 * Math.abs(v) / max)}%, var(--panel2));`;
+      g += `<button class="c${has ? "" : " none"}${k === calSel ? " sel" : ""}${k === today ? " today" : ""}" data-d="${k}" style="${bg}"${has ? "" : " disabled"}>` +
+        `<span class="n">${d}</span><span class="a ${has ? cls(v) : "muted"}">${has ? shortYen(v) : ""}</span></button>`;
+    }
+    $("calGrid").innerHTML = g;
+    const sel = calSel && days[calSel];
+    const rows = !sel ? [] : [["合計", sel.total], ["GMO口座", sel.gmo], ["Saxo口座", sel.saxo], ["累計（記録開始から）", sel.cum], ...(sel.dep ? [["この日の入金（除外済み）", sel.dep]] : [])];
+    const ttl = !sel ? "" : `${calSel.slice(5).replace("-", "/")}${calSel === today ? "（今日・途中）" : sel.partial ? "（記録開始日・途中から）" : ""}`;
+    $("calDetail").innerHTML = !sel ? '<div class="note" style="grid-column:1/-1">日付をタップすると内訳が出ます</div>' :
+      `<div class="k" style="grid-column:1/-1;font-weight:700;color:var(--text);margin-top:8px">${ttl}</div>` +
+      rows.map(([k, v]) => `<div class="k">${k}</div><div class="v ${cls(v)}">${signed(v)}</div>`).join("");
   }
 
   function renderCapitalChanges(c) {
@@ -621,6 +712,12 @@ header>div{min-width:0} header .btn{padding:8px}
   document.addEventListener("visibilitychange", () => { if (!document.hidden) checkUpdate(); });
   document.querySelectorAll("#pageTabs button").forEach((b) => b.onclick = () => showPage(b.dataset.p));
   try { const sp = localStorage.getItem("obsPage"); if (sp && document.getElementById("page-" + sp)) showPage(sp); } catch (e) {}
+  document.querySelectorAll("#calMode button").forEach((b) => b.onclick = () => {
+    calMode = b.dataset.m; document.querySelectorAll("#calMode button").forEach((x) => x.classList.toggle("on", x === b)); drawCalendar();
+  });
+  const calShift = (n) => { const [y, m] = calMonth.split("-").map(Number), d = new Date(y, m - 1 + n, 1); calMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; drawCalendar(); };
+  $("calPrev").onclick = () => calShift(-1); $("calNext").onclick = () => calShift(1);
+  $("calGrid").addEventListener("click", (e) => { const c = e.target.closest("[data-d]"); if (c) { calSel = c.dataset.d; drawCalendar(); } });
   document.querySelectorAll("#rangeTabs button").forEach((b) => b.onclick = () => {
     document.querySelectorAll("#rangeTabs button").forEach((x) => x.classList.toggle("on", x === b));
     range = +b.dataset.r; if (feed) { drawChart(feed.equity_history || []); drawPnlChart(); }
