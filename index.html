@@ -176,7 +176,7 @@ header>div{min-width:0} header .btn{padding:8px}
     <div class="cal-sum" id="calSum"></div>
     <div class="cal" id="calGrid"></div>
     <div id="calDetail" class="kv"></div>
-    <div class="note">日本時間の日付ごとに、その日の最後の残高 − 前日の最後の残高（入金・出金は除外）。評価損益を含みます。最初の日と今日は途中までの集計です。戦略別は各戦略の損益線（GMOコピー・価格差は確定損益、Saxoコピーは確定＋含み）の日次差分で、トレンド他は「GMO口座全体 − コピー − 価格差」の概算です。</div>
+    <div class="note">日本時間の日付ごとに、その日の最後の残高 − 前日の最後の残高（入金・出金は除外）。評価損益を含みます。最初の日と今日は途中までの集計です。戦略別は各戦略の損益線（GMOコピー・価格差は確定損益、Saxoコピーは口座残高の増減＝決済＋含み）の日次差分で、トレンド他は「GMO口座全体 − コピー − 価格差」の概算です。</div>
   </section>
 
   <h2>戦略別の損益</h2>
@@ -185,7 +185,7 @@ header>div{min-width:0} header .btn{padding:8px}
     <div class="chart"><svg id="pnlChart" role="img" aria-label="戦略別の累計損益（円）"></svg></div>
     <div class="legend" id="pnlLegend"></div>
     <div class="pnl-values" id="pnlValues"></div>
-    <div class="note">GMO口座全体：評価額の増減（入出金なし＝損益、トレンド・コピー・価格差を含む）。GMOコピー：確定損益のみ。Saxoコピー：確定損益（台帳の記録分）＋含み損益。確定分未取得時は含み損益のみ。価格差：決済損益（約定ベース、一部推定）。GMO口座は入出金がないため評価額の増減＝損益。Saxo ETF口座はCFD口座へ振替中のため損益線なし。残高増減を損益線として描画しません。各戦略の数値は口座全体の損益ではありません。</div>
+    <div class="note">GMO口座全体：評価額の増減（確認済みの入出金を除く＝損益、トレンド・コピー・価格差を含む）。GMOコピー：確定損益のみ。Saxoコピー：CFD口座の残高増減（決済＋含み損益）。価格差：決済損益（約定ベース、一部推定）。GMO口座は2026-10-02に10万円を入金（グラフでは入金分を除外）。Saxo ETF口座はCFD口座へ振替中のため損益線なし。残高増減を損益線として描画しません。各戦略の数値は口座全体の損益ではありません。</div>
   </section>
 
   <h2>口座・戦略の状況</h2>
@@ -229,7 +229,7 @@ header>div{min-width:0} header .btn{padding:8px}
     <details><summary>GMO 暗号資産トレンド</summary><p>BTC・ETH・XRP の現物を口座の55%まで保有（2026/9/26にLTC・BCHを外し主要3銘柄に集中）。4時間足で「14日前より高いか」「30日前より高いか」を30分ごとに判定し、両方上なら満額＋口座の40%分のレバレッジ買いを上乗せ、片方なら半分、両方下なら売却。証拠金維持率115%割れで上乗せを全決済。</p></details>
     <details><summary>急騰追随</summary><p>BTC・ETH・XRPで、確定した1時間足の上昇が過去30日の標準偏差の2.5倍を超えたら、口座の15%をレバレッジで買い、12時間後に決済。</p></details>
     <details><summary>現物⇄レバレッジ 価格差</summary><p>GMOの現物とレバレッジの価格差を監視。成行側の新規建玉基準は30bp以上（0.30%）。安い方を買い、高い方を売り、差が縮んだら決済します。指値で待つ新規建玉（maker）は停止中です。</p></details>
-    <details><summary>GMO コピー（OKX上位トレーダー）</summary><p>OKX上位トレーダーの建玉を5分ごとに集計。BTC・ETH・XRP・SOL・DOGEで1人1票の買い・売りの多数決に応じてGMOレバレッジを保有します。上限10万円・維持率145%まで。票が消えれば決済します。</p></details>
+    <details><summary>GMO コピー（OKX上位トレーダー）</summary><p>OKX上位トレーダーの建玉を5分ごとに集計。BTC・ETH・XRP・SOL・DOGEで1人1票の買い・売りの多数決に応じてGMOレバレッジを保有します。上限20万円・維持率145%まで。票が消えれば決済します。</p></details>
     <details><summary>Saxo ETF（清算中）</summary><p>ナスダック3倍ETF（TQQQ）と金ETF（GLDM）は清算中。米国市場時間に残りの保有を売却し、新規買いは停止しています。</p></details>
     <details><summary>Saxo 株・商品コピー（OKX上位トレーダー）</summary><p>OKX上位トレーダーの米国株・商品の建玉を5分ごとに集計。銘柄ごとに1人1票、買いを＋1・売りを−1として差し引き、純票数に応じて予算を配分します。分母は純票数の絶対値の合計と4の大きい方で、票が少ないと予算の一部だけを使います。SaxoのCFD（差金決済取引）で追随し、株と商品それぞれの市場時間に発注します。</p></details>
   </section>
@@ -588,7 +588,7 @@ header>div{min-width:0} header .btn{padding:8px}
     const pnl = k.realized_pnl_jpy ?? closes.reduce((t, e) => t + (e.realized_pnl_jpy || 0), 0);
     $("laneCopy").innerHTML = `
       <div class="lane-head"><div class="t">GMO コピー（OKX上位トレーダー）</div><div class="v ${cls(pnl)}" style="font-size:15px">${signed(pnl)}</div></div>
-      <div class="kv"><div class="k">使える枠（上限 ${yen(k.cap_jpy ?? 100000)}＝10万円＋確定損益）</div><div class="v">${yen(k.budget_jpy)}</div>${rows}</div>
+      <div class="kv"><div class="k">使える枠（上限 ${yen(k.cap_jpy ?? 200000)}＝基本枠20万円（10/2に+10万円）＋確定損益）</div><div class="v">${yen(k.budget_jpy)}</div>${rows}</div>
       <div class="note">OKXの上位トレーダーの新規建玉を5分ごとに集計し、銘柄ごとに1人1票の多数決の向きでGMOレバレッジを保有。票が消えれば決済。損益は確定分（約定ベース）。${(k.blockers || []).length ? " 制限: " + esc(k.blockers.join(" / ")) : ""}</div>${renderVariants()}`;
   }
 
@@ -626,14 +626,16 @@ header>div{min-width:0} header .btn{padding:8px}
         <div style="text-align:right">${heldText}<div class="muted" style="font-size:11px">目標 ${Number.isFinite(target) ? (target > 0 ? "買 " : target < 0 ? "売 " : "") + yen(Math.abs(target)) : "—"}</div>
         <div class="${cls(pnl)}" style="font-size:11px">含み損益 ${signed(pnl)}</div></div></div>`;
     }).join("");
+    const pts = (feed?.lane_pnl?.saxo_copy?.points || []).filter((q) => Number.isFinite(q.pnl_jpy)),
+      totalPnl = pts.length ? pts[pts.length - 1].pnl_jpy : null;
     $("laneSaxoCopy").innerHTML = `<div class="lane-head"><div class="t">Saxo 株・商品コピー（OKX上位トレーダー）</div></div>
       <div class="kv"><div class="k">株・商品CFD口座合計</div><div class="v">${yen(k.account_value_jpy)}</div>
       <div class="k">運用予算</div><div class="v">${yen(k.budget_jpy)}</div>
       <div class="k">含み損益</div><div class="v ${cls(k.unrealized_pnl_jpy)}">${signed(k.unrealized_pnl_jpy)}</div>
-      <div class="k">確定損益（台帳の記録分）</div><div class="v ${cls(k.realized_pnl_jpy)}">${signed(k.realized_pnl_jpy)}</div>
+      <div class="k">累計損益（決済＋含み・口座残高ベース）</div><div class="v ${cls(totalPnl)}">${signed(totalPnl)}</div>
       <div class="k">証拠金使用率</div><div class="v">${k.margin_utilization_pct == null ? "—" : number(k.margin_utilization_pct) + "%"}</div></div>
       ${table ? `<div aria-label="Saxoコピーの投票と保有">${table}</div>` : '<div class="empty">投票・保有データなし</div>'}
-      <div class="note">1人1票の純票数で米国株・商品CFDへ配分。5分ごとに更新。票の＋は買い優勢、−は売り優勢。確定損益の「—」は未取得です。</div>
+      <div class="note">1人1票の純票数で米国株・商品CFDへ配分。5分ごとに更新。票の＋は買い優勢、−は売り優勢。累計損益は口座残高の増減（決済済みの損益を含む）、含み損益は今の保有分だけです。</div>
       ${(k.blockers || []).length ? `<div class="note warn">${k.blockers.map((b) => esc(blockerText(b))).join(" / ")}</div>` : ""}`;
   }
 
