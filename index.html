@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trading Observatory</title>
 <meta name="theme-color" content="#0b0f14">
-<meta name="build" content="20261004233000">
+<meta name="build" content="20261005001000">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
@@ -787,7 +787,13 @@ header>div{min-width:0} header .btn{padding:8px}
     ];
     const wd = f.watchdog || {}, wdFail = Object.entries(wd.failing || {});
     const wdRow = `<div class="hrow"><div>見張り役（5分ごと）<div class="sub muted" style="font-size:11px">${wd.generated_at ? esc(wdFail.map(([k, v]) => k + ": " + v).join(" / ") || "ネットワーク・ジョブ・証拠金・disk すべて正常") + " ・ " + jst(wd.generated_at) : "未取得"}</div></div><span class="pill ${!wd.generated_at ? "warn" : wdFail.length ? "bad" : "ok"}">${!wd.generated_at ? "—" : wdFail.length ? wdFail.length + "件 異常" : "正常"}</span></div>`;
-    $("health").innerHTML = wdRow + rows.map(([name, l, maxAge]) => {
+    const mac = f.mac || {}, gb = (v) => (v / 1024 ** 3).toFixed(v >= 1024 ** 4 ? 0 : 1) + "GB";
+    const macAge = ageMin(mac.sampled_at), macKnown = Number.isFinite(macAge) && macAge >= 0 && (mac.disk || mac.cpu || mac.memory);
+    const freePct = mac.disk ? mac.disk.free / mac.disk.total * 100 : null, loadR = mac.cpu ? mac.cpu.load1 / mac.cpu.cores : null, memPct = mac.memory ? mac.memory.used / mac.memory.total * 100 : null;
+    const macBad = (freePct != null && freePct < 10) || (loadR != null && loadR > 2) || (memPct != null && memPct > 95);
+    const macWarn = (freePct != null && freePct < 20) || (loadR != null && loadR > 1) || (memPct != null && memPct > 85) || macAge > 20;
+    const macRow = `<div class="hrow"><div>このMac<div class="sub muted" style="font-size:11px">${macKnown ? `空き ${mac.disk ? gb(mac.disk.free) + `(${freePct.toFixed(0)}%)` : "—"} ・ 負荷 ${mac.cpu ? mac.cpu.load1.toFixed(1) + `/${mac.cpu.cores}コア` : "—"} ・ メモリ ${memPct == null ? "—" : memPct.toFixed(0) + "%(概算)"} ・ ${jst(mac.sampled_at)}` : "未取得"}</div></div><span class="pill ${!macKnown ? "warn" : macBad ? "bad" : macWarn ? "warn" : "ok"}">${!macKnown ? "—" : macBad ? "要確認" : macWarn ? "注意" : "正常"}</span></div>`;
+    $("health").innerHTML = wdRow + macRow + rows.map(([name, l, maxAge]) => {
       l = l || {};
       const age = ageMin(l.updated_at), okStatus = String(l.status || "").startsWith("OK");
       const blockers = [...(l.blockers || []), ...(l.entry_blockers || [])].filter((b) => !/^(US|COMMODITY)_SESSION_CLOSED/.test(b));
