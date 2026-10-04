@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trading Observatory</title>
 <meta name="theme-color" content="#0b0f14">
-<meta name="build" content="20260930093000">
+<meta name="build" content="20261004154500">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
@@ -152,7 +152,7 @@ header>div{min-width:0} header .btn{padding:8px}
   </section>
 
   <nav class="tabs pagetabs" id="pageTabs" aria-label="表示切替">
-    <button data-p="overview" class="on">概要</button><button data-p="orders">注文履歴</button><button data-p="household">家計</button><button data-p="ops">運用</button>
+    <button data-p="overview" class="on">概要</button><button data-p="orders">注文履歴</button><button data-p="household">家計</button><button data-p="weights">票の重み</button><button data-p="ops">運用</button>
   </nav>
 
   <div class="page" id="page-overview">
@@ -205,6 +205,12 @@ header>div{min-width:0} header .btn{padding:8px}
   <div class="page" id="page-household" hidden>
   <h2>家計</h2>
   <section class="card" id="household"><div class="empty">明細CSVを data/household/inbox に置くと表示されます</div></section>
+  </div>
+
+  <div class="page" id="page-weights" hidden>
+  <h2>票の重み（記録のみ・採用は未定）</h2>
+  <section class="card" id="weightsCard"><div class="empty">記録の初回生成待ちです</div></section>
+  <section class="card" id="weightsRank"></section>
   </div>
 
   <div class="page" id="page-orders" hidden>
@@ -317,6 +323,29 @@ header>div{min-width:0} header .btn{padding:8px}
       `<p class="muted" style="font-size:12px">明細期間 ${esc(h.data_coverage?.first_date || '—')}〜${esc(h.data_coverage?.last_date || '—')}。入力明細のみの概算。当月は途中集計、投資額は連続3〜6完了月から算定。負数は不足額。詳細・確認事項はローカルレポート。</p>`;
   }
 
+  function renderWeights(w) {
+    const el = $("weightsCard"), rk = $("weightsRank");
+    if (!w || !w.arms) { el.innerHTML = '<div class="empty">記録の初回生成待ちです</div>'; rk.innerHTML = ""; return; }
+    const sgn = (v) => v == null ? "—" : (v >= 0 ? "+" : "") + Math.round(v).toLocaleString("ja-JP");
+    const cls = (v) => v == null ? "" : v >= 0 ? "pos" : "neg";
+    const rows = w.arms.map((a) => `<tr><td>${esc(a.label_ja || a.key)}${a.scope === "retrospective" ? '<div class="sub muted" style="font-size:10px">過去分</div>' : ""}</td>
+      <td class="${cls(a.pnl_2bp)}">${sgn(a.pnl_2bp)}</td><td class="${cls(a.delta_vs_live_2bp)}">${a.key === "live_rule" ? "基準" : sgn(a.delta_vs_live_2bp)}</td>
+      <td>${a.key === "live_rule" ? "—" : `${sgn(a.ci90_low)}〜${sgn(a.ci90_high)}`}</td><td>${yen(a.max_dd)}</td></tr>`).join("");
+    const fwd = w.days_recorded_forward ?? 0, cps = w.checkpoints_days || [60, 90];
+    const per = w.persistence || {};
+    el.innerHTML = `<div class="note" style="margin:0 0 8px">ペーパー比較（実売買ではありません）。追加コスト2bp・予算10万円で、等票（ライブ規則）と重み付けを比べています。区間は日次差の90%範囲で、0をまたぐ間は差と言えません。</div>
+      <div class="hrow"><div>前向き記録日数</div><span class="pill ${fwd >= cps[0] ? "ok" : "warn"}">${fwd}日（診断点 ${cps.join("・")}日）</span></div>
+      <div class="hrow"><div>順位の持続性（過去→翌日の順位相関）</div><span class="pill warn">${per.rho == null ? "未算出" : Number(per.rho).toFixed(2)}${per.windows != null ? `・${per.windows}窓` : ""}</span></div>
+      <div style="overflow-x:auto"><table class="variants" aria-label="重み付け方式の比較"><thead><tr><th>方式</th><th>損益</th><th>等票との差(合計)</th><th>差の90%区間/日</th><th>最大DD</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="note">更新 ${jst(w.generated_at)}。採用は前向き記録が診断点に達し、費用控除後の優位が確認できてからです。</div>`;
+    const top = (w.ranking || []).filter((r) => !r.bottom), bot = (w.ranking || []).filter((r) => r.bottom);
+    const line = (r, i) => `<tr><td>${esc(r.id).slice(0, 8)}</td><td>${r.n ?? "—"}</td><td>${r.win_rate == null ? "—" : Math.round(r.win_rate * 100) + "%"}</td><td class="${cls(r.shrunk_bps)}">${r.shrunk_bps == null ? "—" : r.shrunk_bps.toFixed(0)}</td><td>${r.open_positions ?? 0}</td></tr>`;
+    const head = "<thead><tr><th>トレーダー</th><th>取引数</th><th>勝率</th><th>補正後bp</th><th>保有中</th></tr></thead>";
+    rk.innerHTML = `<div class="note" style="margin:0 0 8px">ランキング（上位20）。取引数が少ない人は補正で縮小済みで、実力の証明ではありません。</div>
+      <div style="overflow-x:auto"><table class="variants" aria-label="トレーダー順位">${head}<tbody>${top.map(line).join("")}</tbody></table></div>
+      ${bot.length ? `<div class="note">下位</div><div style="overflow-x:auto"><table class="variants">${head}<tbody>${bot.map(line).join("")}</tbody></table></div>` : ""}`;
+  }
+
   function render() {
     const f = feed, hist = f.equity_history || [];
     const age = ageMin(f.generated_at);
@@ -351,6 +380,7 @@ header>div{min-width:0} header .btn{padding:8px}
     renderEvents(f.events || []);
     renderHealth(f);
     renderHousehold(f.household);
+    renderWeights(f.copy_ranking);
   }
 
   let calMonth = null, calMode = "day", calSel = null, calLane = "all";
