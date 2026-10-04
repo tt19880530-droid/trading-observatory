@@ -579,7 +579,32 @@ header>div{min-width:0} header .btn{padding:8px}
         <div class="k">GLDM（金）</div><div class="v">${h["GLDM:arcx"] ?? 0} 株</div>
         <div class="k">目標配分</div><div class="v">${stopped ? "清算・現金化" : "TQQQ 70% / 金 30%"}</div>
       </div>
-      <div class="note">${stopped ? "この金額はETF口座の残高で、ナスダックの運用益ではありません。新規買いは停止中。コピー売買は下の別口座に表示します。" : "200日線を下回るとTQQQを売却して現金化。発注は米国市場時間のみ。"}</div>`;
+      <div class="note">${stopped ? "この金額はETF口座の残高で、ナスダックの運用益ではありません。新規買いは停止中。コピー売買は下の別口座に表示します。" : "200日線を下回るとTQQQを売却して現金化。発注は米国市場時間のみ。"}</div>
+      ${shadowHold(s.shadow_hold)}`;
+  }
+
+  function shadowHold(w) {
+    if (!w) return "";
+    const pts = (w.series || []).map((x) => x.pnl);
+    let svg = "";
+    if (pts.length > 1) {
+      const W = 300, H = 70, lo = Math.min(...pts, w.actual_pnl_jpy, 0), hi = Math.max(...pts, w.actual_pnl_jpy, 0), span = hi - lo || 1;
+      const y = (v) => (4 + (hi - v) / span * (H - 8)).toFixed(1);
+      const line = pts.map((v, i) => `${(i / (pts.length - 1) * W).toFixed(1)},${y(v)}`).join(" ");
+      svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="70" role="img" aria-label="売らずに持っていた場合の損益の推移">
+        <line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="var(--line)" stroke-dasharray="3 3"/>
+        <line x1="0" x2="${W}" y1="${y(w.actual_pnl_jpy)}" y2="${y(w.actual_pnl_jpy)}" stroke="var(--neg)" stroke-dasharray="5 3"/>
+        <polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2"/></svg>`;
+    }
+    return `<div class="lane-head" style="margin-top:14px"><div class="t">もし売らずに持っていたら（紙上の再計算）</div><div class="v ${cls(w.hold_pnl_jpy)}">${signed(w.hold_pnl_jpy)}</div></div>
+      <div class="kv">
+        <div class="k">買った額（TQQQ ${w.shares["TQQQ:xnas"] ?? 0}株・金 ${w.shares["GLDM:arcx"] ?? 0}株）</div><div class="v">${yen(w.cost_jpy)}</div>
+        <div class="k">実際：9/28に売却</div><div class="v">${yen(w.sold_proceeds_jpy)}（<span class="${cls(w.actual_pnl_jpy)}">${signed(w.actual_pnl_jpy)}</span>）</div>
+        <div class="k">持っていた場合の今の評価額</div><div class="v">${yen(w.hold_value_jpy)}（<span class="${cls(w.hold_pnl_jpy)}">${signed(w.hold_pnl_jpy)}</span>）</div>
+        <div class="k">売らなかった場合との差</div><div class="v ${cls(w.diff_vs_actual_jpy)}">${signed(w.diff_vs_actual_jpy)}</div>
+      </div>
+      ${svg}
+      <div class="note">実線＝持ち続けた場合の損益、赤の破線＝実際の確定損益。${esc(jst(w.as_of))}時点の米国市場価格・為替で計算した参考値で、実際の取引ではありません。手数料・税は含みません。</div>`;
   }
 
   function renderCopy(k) {
