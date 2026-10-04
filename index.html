@@ -281,7 +281,7 @@ header>div{min-width:0} header .btn{padding:8px}
       if (!r.ok) throw new Error("HTTP " + r.status);
       feed = await r.json();
       const same = prevGen && prevGen === feed.generated_at;
-      $("fetchedAt").textContent = `確認 ${new Date().toLocaleTimeString("ja-JP", { timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit", second: "2-digit" })}・データ ${jst(feed.generated_at)}時点` + (same ? "（新データなし。約10分ごとに更新）" : "（更新しました）");
+      $("fetchedAt").textContent = `確認 ${new Date().toLocaleTimeString("ja-JP", { timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit", second: "2-digit" })}・データ ${jst(feed.generated_at)}時点` + (same ? "（新データなし。約5分ごとに更新）" : "（更新しました）");
       render();
     } catch (e) {
       $("freshPill").className = "pill bad"; $("freshPill").textContent = "取得失敗: " + e.message;
