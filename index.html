@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trading Observatory</title>
 <meta name="theme-color" content="#0b0f14">
-<meta name="build" content="20261004154500">
+<meta name="build" content="20261004170000">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
@@ -339,8 +339,8 @@ header>div{min-width:0} header .btn{padding:8px}
       <div style="overflow-x:auto"><table class="variants" aria-label="重み付け方式の比較"><thead><tr><th>方式</th><th>損益</th><th>等票との差(合計)</th><th>差の90%区間/日</th><th>最大DD</th></tr></thead><tbody>${rows}</tbody></table></div>
       <div class="note">更新 ${jst(w.generated_at)}。採用は前向き記録が診断点に達し、費用控除後の優位が確認できてからです。</div>`;
     const top = (w.ranking || []).filter((r) => !r.bottom), bot = (w.ranking || []).filter((r) => r.bottom);
-    const line = (r, i) => `<tr><td>${esc(r.id).slice(0, 8)}</td><td>${r.n ?? "—"}</td><td>${r.win_rate == null ? "—" : Math.round(r.win_rate * 100) + "%"}</td><td class="${cls(r.shrunk_bps)}">${r.shrunk_bps == null ? "—" : r.shrunk_bps.toFixed(0)}</td><td>${r.open_positions ?? 0}</td></tr>`;
-    const head = "<thead><tr><th>トレーダー</th><th>取引数</th><th>勝率</th><th>補正後bp</th><th>保有中</th></tr></thead>";
+    const line = (r, i) => `<tr><td>${esc(r.id).slice(0, 8)}</td><td>${r.n ?? "—"}</td><td>${r.win_rate == null ? "—" : Math.round(r.win_rate * 100) + "%"}</td><td class="${cls(r.shrunk_bps)}">${r.shrunk_bps == null ? "—" : r.shrunk_bps.toFixed(0)}</td><td>${r.open_positions ?? 0}${r.open_mtm_worst_bps == null ? "" : `<div class="sub muted" style="font-size:10px">平均${r.open_mtm_mean_bps.toFixed(0)}/最悪${r.open_mtm_worst_bps.toFixed(0)}bp</div>`}</td></tr>`;
+    const head = "<thead><tr><th>トレーダー</th><th>取引数</th><th>勝率</th><th>補正後bp</th><th>保有中(含み損益)</th></tr></thead>";
     rk.innerHTML = `<div class="note" style="margin:0 0 8px">ランキング（上位20）。取引数が少ない人は補正で縮小済みで、実力の証明ではありません。</div>
       <div style="overflow-x:auto"><table class="variants" aria-label="トレーダー順位">${head}<tbody>${top.map(line).join("")}</tbody></table></div>
       ${bot.length ? `<div class="note">下位</div><div style="overflow-x:auto"><table class="variants">${head}<tbody>${bot.map(line).join("")}</tbody></table></div>` : ""}`;
