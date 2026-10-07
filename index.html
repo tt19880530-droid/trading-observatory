@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trading Observatory</title>
 <meta name="theme-color" content="#0b0f14">
-<meta name="build" content="20261007114549">
+<meta name="build" content="20261008082859">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
@@ -152,7 +152,7 @@ header>div{min-width:0} header .btn{padding:8px}
   </section>
 
   <nav class="tabs pagetabs" id="pageTabs" aria-label="表示切替">
-    <button data-p="overview" class="on">概要</button><button data-p="orders">注文履歴</button><button data-p="household">家計</button><button data-p="weights">票の重み</button><button data-p="ops">運用</button><button data-p="tasks">依頼・進捗</button>
+    <button data-p="overview" class="on">概要</button><button data-p="orders">注文履歴</button><button data-p="household">家計</button><button data-p="weights">票の重み</button><button data-p="ops">運用</button><button data-p="research">研究</button><button data-p="tasks">依頼・進捗</button>
   </nav>
 
   <div class="page" id="page-overview">
@@ -221,6 +221,18 @@ header>div{min-width:0} header .btn{padding:8px}
     </div>
     <div class="events" id="events" style="margin-top:12px"></div>
   </section>
+  </div>
+
+  <div class="page" id="page-research" hidden>
+  <h2>研究の結果</h2>
+  <section class="card">
+    <div class="tabs" id="resTabs" style="margin-bottom:10px"></div>
+    <div id="resList"></div>
+  </section>
+  <h2>これから試す案</h2>
+  <section class="card" id="resBacklog"></section>
+  <h2>研究ループの稼働</h2>
+  <section class="card" id="resLoops"></section>
   </div>
 
   <div class="page" id="page-tasks" hidden>
@@ -406,7 +418,9 @@ header>div{min-width:0} header .btn{padding:8px}
     renderCopy(f.lanes.gmo_copy || {});
     renderSaxoCopy(f.lanes.saxo_copy || {});
     renderArb(f.lanes.gmo_basis_arb || {});
+    window.__codexTasks = f.codex_tasks || [];
     renderCodex(f.codex_tasks || []);
+    renderResearch(f.research, f.codex_tasks || []);
     renderEvents(f.events || []);
     renderHealth(f);
     renderAiUsage(f.ai_usage);
@@ -732,6 +746,35 @@ header>div{min-width:0} header .btn{padding:8px}
       <div class="note">1人1票の純票数で米国株・商品CFDへ配分。5分ごとに更新。票の＋は買い優勢、−は売り優勢。累計損益は口座残高の増減（決済済みの損益を含む）、含み損益は今の保有分だけです。</div>
       ${(k.blockers || []).length ? `<div class="note warn">${k.blockers.map((b) => esc(blockerText(b))).join(" / ")}</div>` : ""}`;
   }
+
+  const VERDICT = { ADOPT: ["ok", "採用"], COLLECT: ["warn", "収集"], WATCH: ["warn", "観察"], REJECT: ["bad", "棄却"] };
+  let resFilter = "ALL", resData = null;
+  const TRACK = { general: "汎用", copy: "コピー", portfolio: "配分", factory: "ファクトリー", wild: "ワイルド" };
+  function renderResearch(r, tasks) {
+    resData = r || { results: [], counts: {}, backlog: {} };
+    const c = resData.counts || {}, total = (resData.results || []).length;
+    $("resTabs").innerHTML = [["ALL", `全て ${total}`], ...["ADOPT", "COLLECT", "WATCH", "REJECT"].map((v) => [v, `${VERDICT[v][1]} ${c[v] || 0}`])]
+      .map(([v, t]) => `<button data-v="${v}" class="${v === resFilter ? "on" : ""}">${t}</button>`).join("");
+    const rows = (resData.results || []).filter((x) => resFilter === "ALL" || x.verdict === resFilter);
+    $("resList").innerHTML = rows.length ? rows.map((x) => {
+      const v = VERDICT[x.verdict] || ["warn", x.verdict];
+      return `<details><summary><span class="pill ${v[0]}">${v[1]}</span> ${esc(x.idea)} <span class="muted" style="font-size:11px">${esc(x.date)}</span></summary>
+        <div class="note" style="margin:6px 0 10px">${esc(x.key)}${x.folder ? `<br>報告: docs/research/ideas/${esc(x.folder)}` : ""}</div></details>`;
+    }).join("") : '<div class="empty">該当なし</div>';
+    const bl = resData.backlog || {};
+    const keys = Object.keys(bl);
+    $("resBacklog").innerHTML = keys.length ? keys.map((k) => `<div class="note" style="margin:10px 0 4px"><b>${esc(TRACK[k] || k)}</b> ・ 残り ${bl[k].length}件</div>` +
+      (bl[k].map((t) => `<div class="hrow"><div>${esc(t)}</div></div>`).join("") || '<div class="empty">空（次回補充）</div>')).join("") +
+      `<div class="note">これまでに完了した案: ${resData.backlog_done || 0}件</div>` : '<div class="empty">データなし</div>';
+    const loops = (tasks || []).filter((t) => String(t.name).startsWith("idea-loop"));
+    $("resLoops").innerHTML = loops.length ? loops.map((t) => {
+      const st = t.state === "running" ? ["warn", "実行中"] : t.state === "done" ? ["ok", "完了"] : t.state === "failed" ? ["bad", "失敗"] : ["warn", t.state];
+      return `<div class="hrow"><div>${esc(TRACK[String(t.name).replace(/^idea-loop-?/, "") || "general"] || t.name)}<div class="sub muted" style="font-size:11px">${jst(t.started_at)}${t.finished_at ? " → " + jst(t.finished_at) : ""}</div></div><span class="pill ${st[0]}">${st[1]}</span></div>`;
+    }).join("") : '<div class="empty">直近の実行記録なし（毎時5本が並列で動きます）</div>';
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("#resTabs [data-v]"); if (b) { resFilter = b.dataset.v; renderResearch(resData, window.__codexTasks); }
+  });
 
   function renderCodex(tasks) {
     $("codex").innerHTML = tasks.length ? tasks.slice().reverse().map((t) => {
