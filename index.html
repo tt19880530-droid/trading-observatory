@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trading Observatory</title>
 <meta name="theme-color" content="#0b0f14">
-<meta name="build" content="20261005001000">
+<meta name="build" content="20261007114549">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
@@ -106,7 +106,7 @@ input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--lin
 .cal-sum .k{color:var(--muted);font-size:11px}.cal-sum .v{font-family:var(--mono);font-weight:600;font-size:13px;font-variant-numeric:tabular-nums}
 .grid>*{min-width:0}
 .tabs{max-width:100%;flex-wrap:wrap}
-.pagetabs{width:100%;margin:16px 0 0;position:sticky;top:max(8px,env(safe-area-inset-top));z-index:5;box-shadow:0 6px 14px -8px rgba(0,0,0,.5)}.pagetabs button{flex:1;padding:11px 6px;font-size:14px;min-height:44px}
+.pagetabs{width:100%;margin:16px 0 0;position:sticky;top:max(8px,env(safe-area-inset-top));z-index:5;box-shadow:0 -8px 0 0 var(--bg),0 6px 14px -8px rgba(0,0,0,.5)}.pagetabs button{flex:1;padding:11px 6px;font-size:14px;min-height:44px;white-space:nowrap}@media(max-width:480px){.pagetabs{gap:2px}.pagetabs button{padding:11px 0;font-size:12px}}
 .tabs button{min-height:36px}
 @media(max-width:480px){.hero .big{font-size:32px}.deltas{gap:6px}.delta{padding:8px}.delta .v{font-size:12px}.card{padding:14px}h2{margin-top:22px}.btn{min-height:40px}}
 .wrap{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
@@ -232,15 +232,18 @@ header>div{min-width:0} header .btn{padding:8px}
   <h2>Codex の作業</h2>
   <section class="card" id="codex"></section>
 
+  <h2>AI 利用量・リセット</h2>
+  <section class="card health" id="aiUsage"></section>
+
   <h2>稼働状況</h2>
   <section class="card health" id="health"></section>
 
   <h2>戦略のしくみ</h2>
   <section class="card rules">
-    <details><summary>GMO 暗号資産トレンド</summary><p>BTC・ETH・XRP の現物を口座の55%まで保有（2026/9/26にLTC・BCHを外し主要3銘柄に集中）。4時間足で「14日前より高いか」「30日前より高いか」を30分ごとに判定し、両方上なら満額＋口座の25%分のレバレッジ買いを上乗せ（10/3に40%から縮小、証拠金をコピーへ回すため）、片方なら半分、両方下なら売却。証拠金維持率115%割れで上乗せを全決済。</p></details>
+    <details><summary>GMO 暗号資産トレンド</summary><p>BTC・ETH・XRP の現物を口座の30%まで保有（10/7に55%から縮小、証拠金をコピーへ回すため）（2026/9/26にLTC・BCHを外し主要3銘柄に集中）。4時間足で「14日前より高いか」「30日前より高いか」を30分ごとに判定し、両方上なら満額、片方なら半分、両方下なら売却。レバレッジ上乗せは10/6に停止（効果が小さく、コピーと向きが逆になる場面があるため）。</p></details>
     <details><summary>急騰追随</summary><p>BTC・ETH・XRPで、確定した1時間足の上昇が過去30日の標準偏差の2.5倍を超えたら、口座の15%をレバレッジで買い、12時間後に決済。</p></details>
     <details><summary>現物⇄レバレッジ 価格差</summary><p>GMOの現物とレバレッジの価格差を監視。成行側の新規建玉基準は30bp以上（0.30%）。安い方を買い、高い方を売り、差が縮んだら決済します。指値で待つ新規建玉（maker）は停止中です。</p></details>
-    <details><summary>GMO コピー（OKX上位トレーダー）</summary><p>OKX上位トレーダーの建玉を5分ごとに集計。BTC・ETH・XRP・SOL・DOGEで1人1票の買い・売りの多数決に応じてGMOレバレッジを保有します。上限25万円（10/3に20万円から増額、10/11に30万円・10/18に40万円を予定）・維持率145%まで。票が消えれば決済します。</p></details>
+    <details><summary>GMO コピー（OKX上位トレーダー）</summary><p>OKX上位トレーダーの建玉を5分ごとに集計。BTC・ETH・XRP・SOL・DOGEで1人1票の買い・売りの多数決に応じてGMOレバレッジを保有します。基本枠60万円（10/6に40万円、10/7に60万円へ増額）＋確定損益・維持率145%まで。票が消えれば決済します。</p></details>
     <details><summary>Saxo ETF（清算中）</summary><p>ナスダック3倍ETF（TQQQ）と金ETF（GLDM）は清算中。米国市場時間に残りの保有を売却し、新規買いは停止しています。</p></details>
     <details><summary>Saxo 株・商品コピー（OKX上位トレーダー）</summary><p>OKX上位トレーダーの米国株・商品の建玉を5分ごとに集計。銘柄ごとに1人1票、買いを＋1・売りを−1として差し引き、純票数に応じて予算を配分します。分母は純票数の絶対値の合計と4の大きい方で、票が少ないと予算の一部だけを使います。SaxoのCFD（差金決済取引）で追随し、株と商品それぞれの市場時間に発注します。</p></details>
   </section>
@@ -341,7 +344,8 @@ header>div{min-width:0} header .btn{padding:8px}
     el.innerHTML = `<div class="note" style="margin:0 0 8px">ペーパー比較（実売買ではありません）。追加コスト2bp・予算10万円で、等票（ライブ規則）と重み付けを比べています。区間は日次差の90%範囲で、0をまたぐ間は差と言えません。</div>
       <div class="hrow"><div>前向き記録日数</div><span class="pill ${fwd >= cps[0] ? "ok" : "warn"}">${fwd}日（診断点 ${cps.join("・")}日）</span></div>
       <div class="hrow"><div>順位の持続性（過去→翌日の順位相関）</div><span class="pill warn">${per.rho == null ? "未算出" : Number(per.rho).toFixed(2)}${per.windows != null ? `・${per.windows}窓` : ""}</span></div>
-      <div style="overflow-x:auto"><table class="variants" aria-label="重み付け方式の比較"><thead><tr><th>方式</th><th>損益</th><th>等票との差(合計)</th><th>差の90%区間/日</th><th>最大DD</th></tr></thead><tbody>${rows}</tbody></table></div>
+      ${fwd === 0 ? '<div class="empty">前向きの記録はまだ0日です（2026-10-05開始）。比較表は記録が貯まってから表示します。</div>' : ""}
+      <div style="overflow-x:auto" ${fwd === 0 ? "hidden" : ""}><table class="variants" aria-label="重み付け方式の比較"><thead><tr><th>方式</th><th>損益</th><th>等票との差(合計)</th><th>差の90%区間/日</th><th>最大DD</th></tr></thead><tbody>${rows}</tbody></table></div>
       <div class="note">更新 ${jst(w.generated_at)}。採用は前向き記録が診断点に達し、費用控除後の優位が確認できてからです。</div>`;
     const top = (w.ranking || []).filter((r) => !r.bottom), bot = (w.ranking || []).filter((r) => r.bottom);
     const line = (r, i) => `<tr><td>${esc(r.id).slice(0, 8)}</td><td>${r.n ?? "—"}</td><td>${r.win_rate == null ? "—" : Math.round(r.win_rate * 100) + "%"}</td><td class="${cls(r.shrunk_bps)}">${r.shrunk_bps == null ? "—" : r.shrunk_bps.toFixed(0)}</td><td>${r.open_positions ?? 0}${r.open_mtm_worst_bps == null ? "" : `<div class="sub muted" style="font-size:10px">平均${r.open_mtm_mean_bps.toFixed(0)}/最悪${r.open_mtm_worst_bps.toFixed(0)}bp</div>`}</td></tr>`;
@@ -405,6 +409,7 @@ header>div{min-width:0} header .btn{padding:8px}
     renderCodex(f.codex_tasks || []);
     renderEvents(f.events || []);
     renderHealth(f);
+    renderAiUsage(f.ai_usage);
     renderHousehold(f.household);
     renderWeights(f.copy_ranking);
     renderTasks(f.tasks);
@@ -621,7 +626,7 @@ header>div{min-width:0} header .btn{padding:8px}
         <div class="k">証拠金維持率</div><div class="v" style="color:${mrColor}">${mr ? Math.round(mr * 100) + "%" : "—"}</div>
       </div>
       <div class="gauge"><div style="width:${mrPct * 100}%;background:${mrColor}"></div></div>
-      <div class="note">▲両トレンド上向き（上乗せあり） ▶片方のみ ▼下向き（売却）</div>`;
+      <div class="note">▲両トレンド上向き ▶片方のみ ▼下向き（売却）</div>`;
   }
 
   function renderSaxo(s) {
@@ -676,7 +681,7 @@ header>div{min-width:0} header .btn{padding:8px}
     const pnl = k.realized_pnl_jpy ?? closes.reduce((t, e) => t + (e.realized_pnl_jpy || 0), 0);
     $("laneCopy").innerHTML = `
       <div class="lane-head"><div class="t">GMO コピー（OKX上位トレーダー）</div><div class="v ${cls(pnl)}" style="font-size:15px">${signed(pnl)}</div></div>
-      <div class="kv"><div class="k">使える枠（上限 ${yen(k.cap_jpy ?? 250000)}＝基本枠25万円（10/3に+5万円）＋確定損益）</div><div class="v">${yen(k.budget_jpy)}</div>${rows}</div>
+      <div class="kv"><div class="k">使える枠（上限 ${yen(k.cap_jpy ?? 600000)}＝基本枠60万円（10/7に+20万円）＋確定損益）</div><div class="v">${yen(k.budget_jpy)}</div>${rows}</div>
       <div class="note">OKXの上位トレーダーの新規建玉を5分ごとに集計し、銘柄ごとに1人1票の多数決の向きでGMOレバレッジを保有。票が消えれば決済。損益は確定分（約定ベース）。${(k.blockers || []).length ? " 制限: " + esc(k.blockers.join(" / ")) : ""}</div>${renderVariants()}`;
   }
 
@@ -781,6 +786,23 @@ header>div{min-width:0} header .btn{padding:8px}
     }).join("") || '<div class="empty">まだ取引はありません</div>';
   }
 
+  function renderAiUsage(u) {
+    const left = (ts) => { const m = (ts * 1000 - Date.now()) / 60000; return m <= 0 ? null : m >= 1440 ? `${Math.floor(m / 1440)}日${Math.floor(m % 1440 / 60)}時間` : m >= 60 ? `${Math.floor(m / 60)}時間${Math.round(m % 60)}分` : `${Math.round(m)}分`; };
+    const row = (label, w, seenAt) => {
+      if (!w) return `<div class="hrow"><div>${label}<div class="sub muted" style="font-size:11px">未取得</div></div><span class="pill warn">—</span></div>`;
+      const reset = Number.isFinite(w.resets_at) ? w.resets_at : null, rem = reset ? left(reset) : null, stale = reset && !rem;
+      const pct = Math.max(0, Math.min(100, w.used_percent)), cls = stale ? "warn" : pct >= 90 ? "bad" : pct >= 70 ? "warn" : "ok";
+      const color = cls === "bad" ? "var(--neg)" : cls === "warn" ? "var(--warn)" : "var(--pos)";
+      const sub = stale ? "リセット済み（次の利用で更新）" : `リセットまで ${rem ?? "不明"}${reset ? "（" + jst(reset * 1000) + "）" : ""}`;
+      return `<div class="hrow"><div style="flex:1;min-width:0">${label}<div class="track" style="height:6px;margin:5px 0;background:var(--panel2);border-radius:6px;overflow:hidden"><div style="width:${stale ? 0 : pct}%;height:100%;background:${color}"></div></div><div class="sub muted" style="font-size:11px">${sub} ・ 観測 ${jst(seenAt)}</div></div><span class="pill ${cls}">${stale ? "0" : pct.toFixed(0)}%</span></div>`;
+    };
+    const cl = u?.claude || {}, cx = u?.codex || {}, win = (m) => m >= 1440 ? `${Math.round(m / 1440)}日` : `${Math.round(m / 60)}時間`;
+    const cxRows = [cx.primary, cx.secondary].filter(Boolean).map((w, i) => row(`Codex ${w.window_minutes ? win(w.window_minutes) + "枠" : i ? "副枠" : "主枠"}`, w, cx.observed_at)).join("") || row("Codex", null);
+    const credit = cx.credit_balance != null ? `<div class="hrow"><div>Codex 追加クレジット<div class="sub muted" style="font-size:11px">残高</div></div><span class="pill ok">${cx.credit_balance.toLocaleString("ja-JP")}</span></div>` : "";
+    const note = `<div class="sub muted" style="font-size:11px;margin-top:6px">Claude は Mac で Claude Code を開いている間だけ更新。Codex は最後の作業時点の値。</div>`;
+    $("aiUsage").innerHTML = row("Claude 5時間枠", cl.five_hour, cl.observed_at) + row("Claude 7日枠", cl.seven_day, cl.observed_at) + cxRows + credit + note;
+  }
+
   function renderHealth(f) {
     const L = f.lanes, rows = [
       ["GMO 暗号トレンド", L.gmo_crypto_trend, 45], ["Saxo ETF", L.saxo_etf_trend, 45], ["GMOコピー", L.gmo_copy, 15], ["Saxo 株・商品コピー", L.saxo_copy, 15], ["価格差", L.gmo_basis_arb, 5],
@@ -814,6 +836,7 @@ header>div{min-width:0} header .btn{padding:8px}
     document.querySelectorAll("#pageTabs button").forEach((x) => x.classList.toggle("on", x.dataset.p === p));
     try { localStorage.setItem("obsPage", p); } catch (e) {}
     window.dispatchEvent(new Event("resize"));
+    const nav = $("pageTabs"); if (nav && window.scrollY > 0 && nav.getBoundingClientRect().top <= 80) nav.scrollIntoView({ block: "start" });
   };
   const checkUpdate = async () => {
     try {
