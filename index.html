@@ -13,7 +13,7 @@
 :root{
   --bg:#0b0f14;--panel:#121821;--panel2:#18202b;--line:#233042;--text:#e6edf5;--muted:#8a9bb0;
   --accent:#5eead4;--pos:#34d399;--neg:#f87171;--warn:#fbbf24;--c1:#5eead4;--c2:#a78bfa;--c3:#60a5fa;
-  --k-total:#f1f5f9;--k-gmo:#60a5fa;--k-saxo:#fb923c;--k-copy:#4ade80;--k-arb:#c084fc;
+  --k-total:#f1f5f9;--k-gmo:#60a5fa;--k-saxo:#fb923c;--k-copy:#4ade80;--k-arb:#c084fc;--k-trend:#f43f5e;
   --radius:16px;--gap:14px;color-scheme:dark;
   --sans:"IBM Plex Sans JP",-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
@@ -21,11 +21,11 @@
 @media (prefers-color-scheme:light){:root:not([data-theme="dark"]){color-scheme:light;
   --bg:#f4f6f8;--panel:#ffffff;--panel2:#eef2f6;--line:#dbe2ea;--text:#0e1726;--muted:#586a80;
   --accent:#0f8f82;--pos:#08875f;--neg:#c2362f;--warn:#a35d06;--c1:#0f8f82;--c2:#6d4bd6;--c3:#2563c9;
-  --k-total:#0e1726;--k-gmo:#2563c9;--k-saxo:#d9600a;--k-copy:#15803d;--k-arb:#9333ea;}}
+  --k-total:#0e1726;--k-gmo:#2563c9;--k-saxo:#d9600a;--k-copy:#15803d;--k-arb:#9333ea;--k-trend:#e11d48;}}
 :root[data-theme="light"]{color-scheme:light;
   --bg:#f4f6f8;--panel:#ffffff;--panel2:#eef2f6;--line:#dbe2ea;--text:#0e1726;--muted:#586a80;
   --accent:#0f8f82;--pos:#08875f;--neg:#c2362f;--warn:#a35d06;--c1:#0f8f82;--c2:#6d4bd6;--c3:#2563c9;
-  --k-total:#0e1726;--k-gmo:#2563c9;--k-saxo:#d9600a;--k-copy:#15803d;--k-arb:#9333ea;}
+  --k-total:#0e1726;--k-gmo:#2563c9;--k-saxo:#d9600a;--k-copy:#15803d;--k-arb:#9333ea;--k-trend:#e11d48;}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
 .wrap{max-width:980px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 16px 96px}
@@ -185,7 +185,7 @@ header>div{min-width:0} header .btn{padding:8px}
     <div class="chart"><svg id="pnlChart" role="img" aria-label="戦略別の累計損益（円）"></svg></div>
     <div class="legend" id="pnlLegend"></div>
     <div class="pnl-values" id="pnlValues"></div>
-    <div class="note">GMO口座全体：評価額の増減（確認済みの入出金を除く＝損益、トレンド・コピー・価格差を含む）。GMOコピー：確定損益のみ。Saxoコピー：CFD口座の残高増減（決済＋含み損益）。価格差：決済損益（約定ベース、一部推定）。GMO口座は2026-10-02に10万円を入金（グラフでは入金分を除外）。Saxo ETF口座はCFD口座へ振替中のため損益線なし。残高増減を損益線として描画しません。各戦略の数値は口座全体の損益ではありません。</div>
+    <div class="note">トレンド主体（推定）：GMO口座全体の増減からコピーと価格差の確定損益を引いた残り。トレンド売買に加え、コピーなど未決済ポジションの含み損益・手数料・スワップを含むため参考値です。GMO口座全体：評価額の増減（確認済みの入出金を除く＝損益、トレンド・コピー・価格差を含む）。GMOコピー：確定損益のみ。Saxoコピー：CFD口座の残高増減（決済＋含み損益）。価格差：決済損益（約定ベース、一部推定）。GMO口座は2026-10-02に10万円を入金（グラフでは入金分を除外）。Saxo ETF口座はCFD口座へ振替中のため損益線なし。残高増減を損益線として描画しません。各戦略の数値は口座全体の損益ではありません。</div>
   </section>
 
   <h2>口座・戦略の状況</h2>
@@ -547,6 +547,7 @@ header>div{min-width:0} header .btn{padding:8px}
   const PNL_LANES = [
     ["gmo_copy", "GMOコピー", "var(--k-copy)"], ["gmo_basis_arb", "価格差", "var(--k-arb)"],
     ["saxo_copy", "Saxoコピー（確定＋含み）", "var(--k-saxo)"],
+    ["gmo_trend_only", "トレンド主体（推定）", "var(--k-trend)"],
     ["gmo_crypto_trend", "GMO口座全体（トレンド含む）", "var(--k-gmo)"],
   ];
   function drawPnlChart() {
