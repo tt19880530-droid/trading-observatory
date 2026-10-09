@@ -185,7 +185,7 @@ header>div{min-width:0} header .btn{padding:8px}
     <div class="chart"><svg id="pnlChart" role="img" aria-label="戦略別の累計損益（円）"></svg></div>
     <div class="legend" id="pnlLegend"></div>
     <div class="pnl-values" id="pnlValues"></div>
-    <div class="note">トレンド実測：2026-10-07からトレンド側が評価額を毎回記録しており、評価額の変化から買い増し・売却の額を除いた損益（記録開始前は測れません）。トレンド主体（推定）：GMO口座全体の増減からコピーと価格差の確定損益を引いた残り。トレンド売買に加え、コピーなど未決済ポジションの含み損益・手数料・スワップを含むため参考値です。GMO口座全体：評価額の増減（確認済みの入出金を除く＝損益、トレンド・コピー・価格差を含む）。GMOコピー：確定損益＋保有中ポジションの含み損益（含みは記録開始以降）。トレンド主体はコピーの含み損益も引いてあります。Saxoコピー：CFD口座の残高増減（決済＋含み損益）。価格差：決済損益（約定ベース、一部推定）。GMO口座は2026-10-02に10万円を入金（グラフでは入金分を除外）。Saxo ETF口座はCFD口座へ振替中のため損益線なし。残高増減を損益線として描画しません。各戦略の数値は口座全体の損益ではありません。</div>
+    <div class="note">全体：GMO＋Saxo全口座の評価額の増減（確認済みの入出金3件を除く）。ここが実際の総損益です。トレンド実測と推定が一致しないのは、実測がトレンドの保有分だけの評価額変化なのに対し、推定は口座全体の増減から他を引いた残りで、価格差の含み損益・手数料・スワップ・コピー推定の誤差・GMO評価額の30分更新ずれが全部混ざるためです。トレンド実測：2026-10-07からトレンド側が評価額を毎回記録しており、評価額の変化から買い増し・売却の額を除いた損益（記録開始前は測れません）。トレンド主体（推定）：GMO口座全体の増減からコピーと価格差の確定損益を引いた残り。トレンド売買に加え、コピーなど未決済ポジションの含み損益・手数料・スワップを含むため参考値です。GMO口座全体：評価額の増減（確認済みの入出金を除く＝損益、トレンド・コピー・価格差を含む）。GMOコピー：確定損益＋保有中ポジションの含み損益（含みは記録開始以降）。トレンド主体はコピーの含み損益も引いてあります。Saxoコピー：CFD口座の残高増減（決済＋含み損益）。価格差：決済損益（約定ベース、一部推定）。GMO口座は2026-10-02に10万円を入金（グラフでは入金分を除外）。Saxo ETF口座はCFD口座へ振替中のため損益線なし。残高増減を損益線として描画しません。各戦略の数値は口座全体の損益ではありません。</div>
   </section>
 
   <h2>口座・戦略の状況</h2>
@@ -559,6 +559,7 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   const PNL_LANES = [
+    ["total_all", "全体（GMO＋Saxo・入金除く）", "var(--text)"],
     ["gmo_copy", "GMOコピー", "var(--k-copy)"], ["gmo_basis_arb", "価格差", "var(--k-arb)"],
     ["saxo_copy", "Saxoコピー（確定＋含み）", "var(--k-saxo)"],
     ["gmo_trend_only", "トレンド主体（推定）", "var(--k-trend)"], ["gmo_trend_measured", "トレンド実測（10/7〜）", "var(--k-trend2)"],
@@ -598,7 +599,7 @@ header>div{min-width:0} header .btn{padding:8px}
     for (const s of series) {
       const step = s.key === "gmo_copy" || s.key === "gmo_basis_arb";
       const d = s.pts.map((p, i) => i ? (step ? `H${X(p.t)}V${Y(p.v)}` : `L${X(p.t)},${Y(p.v)}`) : `M${X(p.t)},${Y(p.v)}`).join("");
-      g += `<path data-lane="${s.key}" d="${d}" fill="none" stroke="${s.color}" stroke-width="1.8" stroke-linejoin="round"/>`;
+      g += `<path data-lane="${s.key}" d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.key === "total_all" ? 3 : 1.8}" stroke-linejoin="round"/>`;
       if (s.pts.length) { const p = s.pts.at(-1); g += `<circle cx="${X(p.t)}" cy="${Y(p.v)}" r="2.5" fill="${s.color}"/>`; }
     }
     g += `<text x="${P.l}" y="${H-5}" font-size="10" fill="var(--muted)">${jst(start)}</text><text x="${W-P.r}" y="${H-5}" text-anchor="end" font-size="10" fill="var(--muted)">${jst(end)}</text>`;
