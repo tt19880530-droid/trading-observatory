@@ -806,10 +806,11 @@ header>div{min-width:0} header .btn{padding:8px}
                   ...Object.entries(a.open_reverse || {}).map(([k, p]) => `逆 ${esc(k)} ${p.entry_bps?.toFixed?.(1) ?? ""}bp`),
                   ...Object.entries(a.open_covered || {}).map(([k, p]) => `現物活用 ${esc(k)} ${p.entry_bps?.toFixed?.(1) ?? ""}bp`)];
     const closes = (feed.events || []).filter((e) => e.lane === "gmo_basis_arb" && /CLOSED/.test(e.leg || ""));
-    const arbPnl = closes.reduce((t, e) => t + (e.est_pnl_jpy || 0), 0);
+    const nClosed = a.closed_count ?? closes.length;
+    const arbPnl = a.closed_pnl_jpy ?? closes.reduce((t, e) => t + (e.est_pnl_jpy || 0), 0);
     $("laneArb").innerHTML = `
       <div class="lane-head"><div class="t">GMO 現物⇄レバレッジ 価格差</div><div class="v" style="font-size:15px">${open.length ? open.length + "件 建玉中" : '<span class="muted">待機中</span>'}</div></div>
-      <div class="kv"><div class="k">決済済み</div><div class="v">${closes.length} 回</div><div class="k">損益の合計（約定ベース／一部推定）</div><div class="v ${cls(arbPnl)}">${closes.length ? signed(arbPnl) : "—"}</div></div>
+      <div class="kv"><div class="k">決済済み</div><div class="v">${nClosed} 回</div><div class="k">損益の合計（開始来・約定ベース／一部推定）</div><div class="v ${cls(arbPnl)}">${nClosed ? signed(arbPnl) : "—"}</div></div>
       <div class="note">各銘柄の価格差（順・逆・現物活用の最大値、スプレッド込み）。黄色の線＝成行側の建玉基準30bp。指値で待つ新規建玉は停止中。基準以上でも他の発注条件を満たす必要があります。</div>
       <div class="bars">${rows.join("") || '<div class="empty">データなし</div>'}</div>
       ${open.length ? `<div class="chips">${open.map((o) => `<span class="chip">${o}</span>`).join("")}</div>` : ""}`;
