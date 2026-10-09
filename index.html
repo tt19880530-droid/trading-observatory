@@ -56,6 +56,9 @@ h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
 .chart{position:relative;margin-top:10px}
 .chart svg{width:100%;height:220px;display:block;touch-action:pan-y}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
+.legend button.lg{font:inherit;color:inherit;background:none;border:1px solid var(--line);border-radius:12px;padding:3px 9px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.legend button.lg i{margin-right:0}
+.legend button.lg.off{opacity:.4;text-decoration:line-through}
 .legend i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
 .tip{position:absolute;pointer-events:none;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 9px;font-size:12px;white-space:nowrap;transform:translate(-50%,-110%);display:none}
 .lane-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
@@ -185,7 +188,8 @@ header>div{min-width:0} header .btn{padding:8px}
     <div class="chart"><svg id="pnlChart" role="img" aria-label="戦略別の累計損益（円）"></svg></div>
     <div class="legend" id="pnlLegend"></div>
     <div class="pnl-values" id="pnlValues"></div>
-    <div class="note">全体：GMO＋Saxo全口座の評価額の増減（確認済みの入出金3件を除く）。ここが実際の総損益です。トレンド実測と推定が一致しないのは、実測がトレンドの保有分だけの評価額変化なのに対し、推定は口座全体の増減から他を引いた残りで、価格差の含み損益・手数料・スワップ・コピー推定の誤差・GMO評価額の30分更新ずれが全部混ざるためです。トレンド実測：2026-10-07からトレンド側が評価額を毎回記録しており、評価額の変化から買い増し・売却の額を除いた損益（記録開始前は測れません）。トレンド主体（推定）：GMO口座全体の増減からコピーと価格差の確定損益を引いた残り。トレンド売買に加え、コピーなど未決済ポジションの含み損益・手数料・スワップを含むため参考値です。GMO口座全体：評価額の増減（確認済みの入出金を除く＝損益、トレンド・コピー・価格差を含む）。GMOコピー：確定損益＋保有中ポジションの含み損益（含みは記録開始以降）。トレンド主体はコピーの含み損益も引いてあります。Saxoコピー：CFD口座の残高増減（決済＋含み損益）。価格差：決済損益（約定ベース、一部推定）。GMO口座は2026-10-02に10万円を入金（グラフでは入金分を除外）。Saxo ETF口座はCFD口座へ振替中のため損益線なし。残高増減を損益線として描画しません。各戦略の数値は口座全体の損益ではありません。</div>
+    <div class="note">太い線＝実際の総損益（入金除く）。凡例をタップすると線の表示/非表示を切り替えられます。「トレンド主体（推定）」と「GMO口座全体」は口座残高が30分ごとの更新で他の線と時刻がずれるため、急な上下（スパイク）は実際の損益ではなく見かけの動きを含みます。初期表示では隠しています。</div>
+    <details class="note"><summary>各線の説明</summary>全体：GMO＋Saxo全口座の評価額の増減（確認済みの入出金3件を除く）。ここが実際の総損益です。トレンド実測と推定が一致しないのは、実測がトレンドの保有分だけの評価額変化なのに対し、推定は口座全体の増減から他を引いた残りで、価格差の含み損益・手数料・スワップ（コピーの手数料・carry推定約2.5千円は推定線に流れ込みます）・コピー推定の誤差・GMO評価額の30分更新ずれが全部混ざるためです。トレンド実測：2026-10-07からトレンド側が評価額を毎回記録しており、評価額の変化から買い増し・売却の額を除いた損益（記録開始前は測れません）。トレンド主体（推定）：GMO口座全体の増減からコピーと価格差の確定損益を引いた残り。トレンド売買に加え、コピーなど未決済ポジションの含み損益・手数料・スワップを含むため参考値です。GMO口座全体：評価額の増減（確認済みの入出金を除く＝損益、トレンド・コピー・価格差を含む）。GMOコピー：確定損益＋保有中ポジションの含み損益（含みは記録開始以降）。トレンド主体はコピーの含み損益も引いてあります。Saxoコピー：CFD口座の残高増減（決済＋含み損益）。価格差：決済損益（約定ベース、一部推定）。GMO口座は2026-10-02に10万円を入金（グラフでは入金分を除外）。Saxo ETF口座はCFD口座へ振替中のため損益線なし。残高増減を損益線として描画しません。各戦略の数値は口座全体の損益ではありません。</details>
   </section>
 
   <h2>口座・戦略の状況</h2>
@@ -565,6 +569,11 @@ header>div{min-width:0} header .btn{padding:8px}
     ["gmo_trend_only", "トレンド主体（推定）", "var(--k-trend)"], ["gmo_trend_measured", "トレンド実測（10/7〜）", "var(--k-trend2)"],
     ["gmo_crypto_trend", "GMO口座全体（トレンド含む）", "var(--k-gmo)"],
   ];
+  const PNL_DEFAULT = ["total_all", "gmo_copy", "gmo_basis_arb", "saxo_copy", "gmo_trend_measured"];
+  function pnlShown() {
+    try { const v = JSON.parse(localStorage.getItem("pnlShown")); if (Array.isArray(v)) return new Set(v); } catch (_) {}
+    return new Set(PNL_DEFAULT);
+  }
   function drawPnlChart() {
     const svg = $("pnlChart"), W = svg.clientWidth || 340, H = 220;
     const end = Date.parse(feed.generated_at) || Date.now(), cutoff = range ? end - range * 86400e3 : -Infinity;
@@ -579,10 +588,17 @@ header>div{min-width:0} header .btn{padding:8px}
       if (last && last.t < end) pts.push({ t: end, v: last.v });
       return { key, name, color, pts, last };
     });
-    $("pnlLegend").innerHTML = series.map((s) => `<span><i style="background:${s.color}"></i>${s.name}</span>`).join("");
+    const shown = pnlShown();
+    $("pnlLegend").innerHTML = series.map((s) => `<button type="button" class="lg${shown.has(s.key) ? "" : " off"}" data-lane="${s.key}"><i style="background:${s.color}"></i>${s.name}</button>`).join("");
+    $("pnlLegend").onclick = (e) => {
+      const b = e.target.closest("button[data-lane]"); if (!b) return;
+      if (shown.has(b.dataset.lane)) shown.delete(b.dataset.lane); else shown.add(b.dataset.lane);
+      try { localStorage.setItem("pnlShown", JSON.stringify([...shown])); } catch (_) {}
+      drawPnlChart();
+    };
     $("pnlValues").innerHTML = series.map((s) => `<div><span class="muted">${s.name} ・ 最新記録</span><b class="${cls(s.last?.v)}">${signed(s.last?.v)}</b><span class="muted" style="font-size:10px">${s.last ? jst(s.last.t) : "記録なし"}</span></div>`).join("");
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    const points = series.flatMap((s) => s.pts);
+    const points = series.filter((s) => shown.has(s.key)).flatMap((s) => s.pts);
     if (!points.length) {
       svg.innerHTML = `<text x="${W / 2}" y="110" text-anchor="middle" fill="var(--muted)" font-size="13">損益データはまだありません</text>`; return;
     }
@@ -596,7 +612,7 @@ header>div{min-width:0} header .btn{padding:8px}
     const Y = (v) => P.t + (hi - v) / (hi - lo) * (H - P.t - P.b);
     let g = [lo, hi].map((v) => `<line x1="${P.l}" x2="${W-P.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${P.l-5}" y="${Y(v)+3}" text-anchor="end" font-size="10" fill="var(--muted)">${axis(v)}</text>`).join("");
     g += `<line x1="${P.l}" x2="${W-P.r}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--muted)" stroke-dasharray="4 3"/><text x="${P.l-5}" y="${Y(0)+3}" text-anchor="end" font-size="10" fill="var(--muted)">¥0</text>`;
-    for (const s of series) {
+    for (const s of series.filter((x) => shown.has(x.key))) {
       const step = s.key === "gmo_copy" || s.key === "gmo_basis_arb";
       const d = s.pts.map((p, i) => i ? (step ? `H${X(p.t)}V${Y(p.v)}` : `L${X(p.t)},${Y(p.v)}`) : `M${X(p.t)},${Y(p.v)}`).join("");
       g += `<path data-lane="${s.key}" d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.key === "total_all" ? 3 : 1.8}" stroke-linejoin="round"/>`;
