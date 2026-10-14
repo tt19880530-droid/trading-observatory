@@ -8,7 +8,7 @@
 <meta name="build" content="20261008082859">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap" media="print" onload="this.media='all'">
 <style>
 :root{
   --bg:#0b0f14;--panel:#121821;--panel2:#18202b;--line:#233042;--text:#e6edf5;--muted:#8a9bb0;
@@ -155,7 +155,7 @@ header>div{min-width:0} header .btn{padding:8px}
   </section>
 
   <nav class="tabs pagetabs" id="pageTabs" aria-label="表示切替">
-    <button data-p="overview" class="on">概要</button><button data-p="orders">注文履歴</button><button data-p="household">家計</button><button data-p="weights">票の重み</button><button data-p="ops">運用</button><button data-p="research">研究</button><button data-p="tasks">依頼・進捗</button>
+    <button data-p="overview" class="on">概要</button><button data-p="orders">注文履歴</button><button data-p="household">家計</button><button data-p="tax">税金</button><button data-p="weights">票の重み</button><button data-p="ops">運用</button><button data-p="research">研究</button><button data-p="tasks">依頼・進捗</button>
   </nav>
 
   <div class="page" id="page-overview">
@@ -209,6 +209,11 @@ header>div{min-width:0} header .btn{padding:8px}
   <div class="page" id="page-household" hidden>
   <h2>家計</h2>
   <section class="card" id="household"><div class="empty">明細CSVを data/household/inbox に置くと表示されます</div></section>
+  </div>
+
+  <div class="page" id="page-tax" hidden>
+  <h2>税金の概算（今年・暫定）</h2>
+  <section class="card" id="taxCard"><div class="empty">読み込み中</div></section>
   </div>
 
   <div class="page" id="page-weights" hidden>
@@ -296,6 +301,11 @@ header>div{min-width:0} header .btn{padding:8px}
   const ageMin = (s) => s ? (Date.now() - new Date(s).getTime()) / 60000 : Infinity;
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   let feed = null, range = 7, evLane = "";
+  // Rows logged while the Saxo CFD account read failed (copy PnL null, Saxo = ETF cash only) are not balances.
+  function dropFailedSaxoReads(f) {
+    if (f && Array.isArray(f.equity_history))
+      f.equity_history = f.equity_history.filter((h) => !(h.saxo_copy_unrealized == null && h.saxo_copy_realized == null && h.saxo_etf != null && h.saxo_etf <= 0 && h.saxo === h.saxo_etf));
+  }
 
   async function load() {
     const btn = $("refresh"), prevGen = feed && feed.generated_at;
@@ -310,6 +320,8 @@ header>div{min-width:0} header .btn{padding:8px}
         { headers: { Authorization: `Bearer ${c.token}`, Accept: "application/vnd.github.raw+json" }, cache: "no-store" });
       if (!r.ok) throw new Error("HTTP " + r.status);
       feed = await r.json();
+      dropFailedSaxoReads(feed);
+      try { localStorage.setItem("obs.feedCache", JSON.stringify(feed)); } catch (_) { try { localStorage.removeItem("obs.feedCache"); } catch (__) {} }
       const same = prevGen && prevGen === feed.generated_at;
       $("fetchedAt").textContent = `確認 ${new Date().toLocaleTimeString("ja-JP", { timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit", second: "2-digit" })}・データ ${jst(feed.generated_at)}時点` + (same ? "（新データなし。約5分ごとに更新）" : "（更新しました）");
       render();
@@ -414,6 +426,7 @@ header>div{min-width:0} header .btn{padding:8px}
         (dep ? `<div class="muted" style="font-size:10px">入金除く</div>` : "");
     });
     renderCapitalChanges(f.capital_changes || {});
+    renderTax(f.capital_changes || {});
     drawChart(hist);
     drawCalendar();
     drawPnlChart();
@@ -518,6 +531,28 @@ header>div{min-width:0} header .btn{padding:8px}
     $("calDetail").innerHTML = !sel ? '<div class="note" style="grid-column:1/-1">日付をタップすると内訳が出ます</div>' :
       `<div class="k" style="grid-column:1/-1;font-weight:700;color:var(--text);margin-top:8px">${ttl}</div>` +
       rows.map(([k, v]) => `<div class="k">${k}</div><div class="v ${cls(v)}">${signed(v)}</div>`).join("");
+  }
+
+  const TAX = { crypto: 0.3042, saxo: 0.20315 };
+  function renderTax(c) {
+    const acc = c.accounts || {};
+    const rows = [["GMO 暗号資産", "gmo_crypto", TAX.crypto, "雑所得（総合課税）。所得税20.42%＋住民税10%＝約30.4%と仮定"],
+                  ["Saxo", "saxo", TAX.saxo, "申告分離課税 20.315%（株・ETF・CFD）"]];
+    let sum = 0, tot = 0, gain = 0;
+    const body = rows.map(([label, k, rate, basis]) => {
+      const pnl = acc[k]?.change_less_confirmed_flows_jpy, ok = typeof pnl === "number";
+      const tax = ok ? Math.max(0, pnl) * rate : null;
+      if (ok) { sum += pnl; tot += tax; gain += Math.max(0, pnl); }
+      return `<tr><td>${label}<div class="note">${basis}</div></td><td align="right" class="${cls(pnl)}">${signed(pnl)}</td><td align="right">${(rate * 100).toFixed(1)}%</td><td align="right">${yen(tax)}</td></tr>`;
+    }).join("");
+    $("taxCard").innerHTML = `<div style="overflow-x:auto"><table class="variants" style="margin-top:0">
+      <thead><tr><th align="left">口座</th><th align="right">損益（入金控除後）</th><th align="right">税率</th><th align="right">概算税額</th></tr></thead>
+      <tbody>${body}<tr><td><b>合計</b></td><td align="right" class="${cls(sum)}">${signed(sum)}</td><td></td><td align="right"><b>${yen(tot)}</b></td></tr></tbody></table></div>
+      <div class="kv" style="margin-top:12px"><div class="k">納税積立の目安（利益が出た口座の利益の20〜30%）</div><div class="v">${yen(gain * 0.2)}〜${yen(gain * 0.3)}</div></div>
+      <div class="note">損益は「資産の増減−確認済み入金」で、含み益を含みます。税がかかるのは決済・売却で確定した分だけなので、実際の税額はこれより小さくなる場合があります。</div>
+      <div class="note">暗号資産（雑所得）と株・CFD（申告分離）の損益は通算できません。片方の損失でもう片方の利益は減らせません。損失の繰越しも種類で異なります。</div>
+      <div class="note">給与所得者は、副業の所得合計が年20万円以下なら所得税の確定申告は不要です（住民税の申告は別）。</div>
+      <div class="note">概算です。税率はあなたの所得区分（課税所得330〜695万円）からの仮定で、年間の確定損益ではありません。申告前に税理士か国税庁の情報で確認してください。</div>`;
   }
 
   function renderCapitalChanges(c) {
@@ -937,7 +972,10 @@ header>div{min-width:0} header .btn{padding:8px}
   $("sSave").onclick = () => { store.set("obs.token", $("sToken").value.trim()); store.set("obs.repo", $("sRepo").value.trim()); store.set("obs.branch", $("sBranch").value.trim()); dlg.close(); load(); };
   $("refresh").onclick = load;
   window.addEventListener("resize", () => { if (feed) { drawChart(feed.equity_history || []); drawPnlChart(); } });
-  if (window.__OBS_FEED__) { feed = window.__OBS_FEED__; render(); } else { load(); setInterval(load, 60000); }
+  if (window.__OBS_FEED__) { feed = window.__OBS_FEED__; dropFailedSaxoReads(feed); render(); } else {
+    try { const cached = JSON.parse(localStorage.getItem("obs.feedCache")); if (cached && cached.generated_at) { feed = cached; dropFailedSaxoReads(feed); render(); } } catch (_) {}
+    load(); setInterval(load, 60000);
+  }
 })();
 </script>
 </body>
