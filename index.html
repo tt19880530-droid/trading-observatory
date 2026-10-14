@@ -426,7 +426,7 @@ header>div{min-width:0} header .btn{padding:8px}
         (dep ? `<div class="muted" style="font-size:10px">入金除く</div>` : "");
     });
     renderCapitalChanges(f.capital_changes || {});
-    renderTax(f.capital_changes || {});
+    renderTax(f.capital_changes || {}, f.tax_realized || {});
     drawChart(hist);
     drawCalendar();
     drawPnlChart();
@@ -534,7 +534,7 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   const TAX = { crypto: 0.3042, saxo: 0.20315 };
-  function renderTax(c) {
+  function renderTax(c, tr) {
     const acc = c.accounts || {};
     const rows = [["GMO 暗号資産", "gmo_crypto", TAX.crypto, "雑所得（総合課税）。所得税20.42%＋住民税10%＝約30.4%と仮定"],
                   ["Saxo", "saxo", TAX.saxo, "申告分離課税 20.315%（株・ETF・CFD）"]];
@@ -545,6 +545,21 @@ header>div{min-width:0} header .btn{padding:8px}
       if (ok) { sum += pnl; tot += tax; gain += Math.max(0, pnl); }
       return `<tr><td>${label}<div class="note">${basis}</div></td><td align="right" class="${cls(pnl)}">${signed(pnl)}</td><td align="right">${(rate * 100).toFixed(1)}%</td><td align="right">${yen(tax)}</td></tr>`;
     }).join("");
+    const years = Object.keys(tr.years || {}).sort().reverse();
+    const q = (x) => x === "exact" ? "確定値" : "推計";
+    const rtax = (k, net) => Math.max(0, net) * (k === "crypto" ? TAX.crypto : TAX.saxo);
+    const yearHtml = years.map((y) => {
+      const by = tr.years[y]; let yt = 0;
+      const blocks = [["crypto", "暗号資産（雑所得）"], ["saxo", "Saxo（申告分離）"]].filter(([k]) => by[k]).map(([k, name]) => {
+        const g = by[k], t = rtax(k, g.net_jpy); yt += t;
+        const items = g.items.map((i) => `<tr><td>${esc(i.label)}<div class="note">${q(i.quality)}</div></td><td align="right">${signed(i.gross_jpy)}</td><td align="right">${i.fees_jpy ? "−" + yen(i.fees_jpy) : "—"}</td><td align="right" class="${cls(i.net_jpy)}">${signed(i.net_jpy)}</td></tr>`).join("");
+        return `<tr><td colspan="4"><b>${name}</b></td></tr>${items}<tr><td>小計（税 約${yen(t)}）</td><td></td><td></td><td align="right" class="${cls(g.net_jpy)}"><b>${signed(g.net_jpy)}</b></td></tr>`;
+      }).join("");
+      return `<h3 style="margin:14px 0 4px">${esc(y)}年（1/1〜12/31 JST）　概算税額 ${yen(yt)}</h3><div style="overflow-x:auto"><table class="variants" style="margin-top:0"><thead><tr><th align="left">レーン</th><th align="right">損益</th><th align="right">手数料</th><th align="right">確定損益</th></tr></thead><tbody>${blocks}</tbody></table></div>`;
+    }).join("");
+    const realizedHtml = `<h2 style="margin-top:22px">確定損益の年間集計</h2>${yearHtml || '<div class="note">集計できるデータがまだありません。</div>'}
+      <div class="note">GMOコピーは取引所の決済損益と手数料の実額です。価格差・現物トレンドは台帳の推計値、Saxoは「残高増減−入金−含み損益」による推計で、約定ごとの確定損益ではありません。</div>
+      <div class="note">台帳に載らないもの：ロールオーバー・資金調達費用、台帳外の手数料・スプレッド。口座の増減（GMO ${signed(tr.gmo_account_change_jpy)} ／ Saxo ${signed(tr.saxo_account_change_jpy)}）との差は、含み損益とこれらです。申告には取引所の年間取引報告書を使ってください。</div>`;
     $("taxCard").innerHTML = `<div style="overflow-x:auto"><table class="variants" style="margin-top:0">
       <thead><tr><th align="left">口座</th><th align="right">損益（入金控除後）</th><th align="right">税率</th><th align="right">概算税額</th></tr></thead>
       <tbody>${body}<tr><td><b>合計</b></td><td align="right" class="${cls(sum)}">${signed(sum)}</td><td></td><td align="right"><b>${yen(tot)}</b></td></tr></tbody></table></div>
@@ -552,7 +567,7 @@ header>div{min-width:0} header .btn{padding:8px}
       <div class="note">損益は「資産の増減−確認済み入金」で、含み益を含みます。税がかかるのは決済・売却で確定した分だけなので、実際の税額はこれより小さくなる場合があります。</div>
       <div class="note">暗号資産（雑所得）と株・CFD（申告分離）の損益は通算できません。片方の損失でもう片方の利益は減らせません。損失の繰越しも種類で異なります。</div>
       <div class="note">給与所得者は、副業の所得合計が年20万円以下なら所得税の確定申告は不要です（住民税の申告は別）。</div>
-      <div class="note">概算です。税率はあなたの所得区分（課税所得330〜695万円）からの仮定で、年間の確定損益ではありません。申告前に税理士か国税庁の情報で確認してください。</div>`;
+      <div class="note">概算です。税率はあなたの所得区分（課税所得330〜695万円）からの仮定です。申告前に税理士か国税庁の情報で確認してください。</div>${realizedHtml}`;
   }
 
   function renderCapitalChanges(c) {
