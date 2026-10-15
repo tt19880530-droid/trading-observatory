@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trading Observatory</title>
 <meta name="theme-color" content="#0b0f14">
-<meta name="build" content="20261015150000">
+<meta name="build" content="20261015170000">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap" media="print" onload="this.media='all'">
@@ -244,6 +244,8 @@ header>div{min-width:0} header .btn{padding:8px}
   </section>
   <h2>保有中・直近の判断</h2>
   <section class="card" id="aiLive"></section>
+  <h2>振り返りと学び（AIが自分の取引から更新）</h2>
+  <section class="card" id="aiLearn"></section>
   <h2>決済済みの取引</h2>
   <section class="card" id="aiTrades"></section>
   </div>
@@ -419,6 +421,10 @@ header>div{min-width:0} header .btn{padding:8px}
     const d = sel === "codex" ? c : a, name = sel === "codex" ? "Codex" : "Claude";
     live.innerHTML = `<div class="note" style="margin:0 0 6px">${name}の保有中と直近の判断</div>` + ((d.open || []).map((o) => `<div class="hrow"><div>${esc(o.coin)} ${o.side > 0 ? "買い" : "売り"} <span class="muted">${jst(o.at)}・${o.horizon_min}分・損切${o.stop_bps}/利確${o.target_bps}bp</span><div class="sub muted" style="font-size:11px">${esc(o.why)}</div></div><span class="pill warn">保有中</span></div>`).join(""))
       + `<div class="note" style="margin-top:8px">直近の判断</div>` + ((d.decisions || []).slice(-12).reverse().map((x) => `<div class="hrow"><div><span class="muted">${jst(x.at)}・${x.kind === "trigger" ? "急変" : "定時"}</span><div class="sub" style="font-size:11px">${esc(x.why)}</div></div><span class="pill ${x.action === "FLAT" ? "warn" : "ok"}">${x.action === "FLAT" ? "見送り" : esc(x.action) + " " + esc(x.coin)}</span></div>`).join("") || '<div class="empty">まだありません</div>');
+    const pb = d.playbook || {}, rv = (d.reviews || []).slice().reverse();
+    $("aiLearn").innerHTML = `<div class="note" style="margin:0 0 6px">${name}の現在の教訓${pb.version ? `（第${pb.version}版・${jst(pb.updated_at)}）` : ""}。決済6件たまるごと（最短3時間おき）に、自分の取引と機械ルールとの差を見直して更新し、以後の判断に使います。少ない件数での教訓は偶然の可能性があります。</div>`
+      + (pb.lessons && pb.lessons.length ? `<ul style="margin:0 0 8px;padding-left:18px;font-size:13px">${pb.lessons.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : '<div class="empty">まだ振り返り前です（決済6件で最初の振り返り）</div>')
+      + rv.slice(0, 3).map((r) => `<div class="hrow"><div><span class="muted">${jst(r.at)}・決済${r.n_closed}件時点</span><div class="sub" style="font-size:12px">${esc(r.summary)}</div></div></div>`).join("");
     const t = d.trades || [];
     tr.innerHTML = t.length ? `<div style="overflow-x:auto"><table class="variants" aria-label="決済済み取引"><thead><tr><th>決済</th><th>銘柄</th><th>損益</th><th>bp</th><th>機械(順/逆)</th></tr></thead><tbody>${t.slice(-30).reverse().map((x) =>
       `<tr><td>${jst(x.at)}<div class="sub muted" style="font-size:10px">${esc(x.reason_close)}</div></td><td>${esc(x.coin)} ${x.side > 0 ? "買" : "売"}</td><td class="${cls(x.pnl_jpy)}">${signed(x.pnl_jpy)}</td><td>${bps(x.net_bps)}</td><td>${x.follow_pnl_jpy == null ? "—" : signed(x.follow_pnl_jpy) + " / " + signed(x.fade_pnl_jpy)}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">${name}の決済済み取引はまだありません</div>`;
