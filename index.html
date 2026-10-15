@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trading Observatory</title>
 <meta name="theme-color" content="#0b0f14">
-<meta name="build" content="20261015170000">
+<meta name="build" content="20261015224500">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap" media="print" onload="this.media='all'">
@@ -841,7 +841,7 @@ header>div{min-width:0} header .btn{padding:8px}
   const number = (v) => Number.isFinite(v) ? v.toLocaleString("ja-JP", { maximumFractionDigits: 4 }) : "—";
   const BLOCKERS = {
     CFD_ACCOUNT_UNFUNDED: "CFD口座が未入金", US_SESSION_CLOSED_NO_ORDERS: "米国市場時間外",
-    COMMODITY_SESSION_CLOSED_NO_ORDERS: "商品市場時間外", SAXO_TOKEN_EXPIRED_OR_MISSING_NO_REFRESH: "Saxoの接続認証を確認してください",
+    COMMODITY_SESSION_CLOSED_NO_ORDERS: "商品市場時間外", SAXO_TOKEN_EXPIRED_OR_MISSING_NO_REFRESH: "Saxoの認証切れ（再ログイン待ち）",
     SESSION_NOT_FULL_TRADING_NO_ORDERS: "Saxoの取引セッションが利用できません", UNKNOWN_OUTCOME_BLOCKED: "注文結果の確認待ち",
     ORDER_OUTCOME_UNKNOWN: "注文結果が未確認", FAILED_POST_STOP: "発注失敗により停止",
     KILL_SWITCH_OPEN_BLOCKED: "緊急停止により新規注文を停止", MARGIN_CLOSE_ALL: "証拠金不足のため全決済",
@@ -853,6 +853,8 @@ header>div{min-width:0} header .btn{padding:8px}
   };
   const blockerText = (b) => BLOCKERS[String(b).split(":")[0]] || "取引条件を確認してください";
   function renderSaxoCopy(k) {
+    const orig = k;
+    if (k.auth_expired && k.last_known) { const l = k.last_known; k = { ...k, votes: l.votes, targets_jpy: l.targets_jpy, positions: l.positions, margin_utilization_pct: l.margin_utilization_pct }; }
     const votes = k.votes || {}, targets = k.targets_jpy || {}, symbols = k.symbols || {};
     const held = {};
     for (const p of k.positions || []) {
@@ -874,10 +876,13 @@ header>div{min-width:0} header .btn{padding:8px}
     }).join("");
     const pts = (feed?.lane_pnl?.saxo_copy?.points || []).filter((q) => Number.isFinite(q.pnl_jpy)),
       totalPnl = pts.length ? pts[pts.length - 1].pnl_jpy : null;
-    $("laneSaxoCopy").innerHTML = `<div class="lane-head"><div class="t">Saxo 株・商品コピー（OKX上位トレーダー）</div></div>
-      <div class="kv"><div class="k">株・商品CFD口座合計</div><div class="v">${yen(k.account_value_jpy)}</div>
-      <div class="k">運用予算</div><div class="v">${yen(k.budget_jpy)}</div>
-      <div class="k">含み損益</div><div class="v ${cls(k.unrealized_pnl_jpy)}">${signed(k.unrealized_pnl_jpy)}</div>
+    const lk = k.auth_expired ? orig.last_known : null, aged = lk ? ' <span class="muted" style="font-size:11px">（最終取得値）</span>' : "";
+    const banner = k.auth_expired ? `<div class="note" style="border:1px solid var(--bad,#c0392b);color:var(--bad,#c0392b);padding:8px;margin-bottom:8px;border-radius:6px"><b>Saxoの認証切れ</b>：保有ポジションの管理と新規注文を停止中です。再ログインが必要です。${lk ? esc(jst(lk.updated_at)) + " 時点の値を表示しています。" : ""}</div>` : "";
+    const accV = lk ? lk.account_value_jpy : k.account_value_jpy, budV = lk ? lk.budget_jpy : k.budget_jpy, unrV = lk ? lk.unrealized_pnl_jpy : k.unrealized_pnl_jpy;
+    $("laneSaxoCopy").innerHTML = `<div class="lane-head"><div class="t">Saxo 株・商品コピー（OKX上位トレーダー）</div></div>${banner}
+      <div class="kv"><div class="k">株・商品CFD口座合計</div><div class="v">${yen(accV)}${aged}</div>
+      <div class="k">運用予算</div><div class="v">${yen(budV)}${aged}</div>
+      <div class="k">含み損益</div><div class="v ${cls(unrV)}">${signed(unrV)}${aged}</div>
       <div class="k">累計損益（決済＋含み・口座残高ベース）</div><div class="v ${cls(totalPnl)}">${signed(totalPnl)}</div>
       <div class="k">証拠金使用率</div><div class="v">${k.margin_utilization_pct == null ? "—" : number(k.margin_utilization_pct) + "%"}</div></div>
       ${table ? `<div aria-label="Saxoコピーの投票と保有">${table}</div>` : '<div class="empty">投票・保有データなし</div>'}
