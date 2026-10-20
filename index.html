@@ -282,7 +282,7 @@ header>div{min-width:0} header .btn{padding:8px}
     <details><summary>GMO 暗号資産トレンド</summary><p>BTC・ETH・XRP の現物を口座の30%まで保有（10/7に55%から縮小、証拠金をコピーへ回すため）（2026/9/26にLTC・BCHを外し主要3銘柄に集中）。4時間足で「14日前より高いか」「30日前より高いか」を30分ごとに判定し、両方上なら満額、片方なら半分、両方下なら売却。レバレッジ上乗せは10/6に停止（効果が小さく、コピーと向きが逆になる場面があるため）。</p></details>
     <details><summary>急騰追随</summary><p>BTC・ETH・XRPで、確定した1時間足の上昇が過去30日の標準偏差の2.5倍を超えたら、口座の15%をレバレッジで買い、12時間後に決済。</p></details>
     <details><summary>現物⇄レバレッジ 価格差</summary><p>GMOの現物とレバレッジの価格差を監視。成行側の新規建玉基準は30bp以上（0.30%）。安い方を買い、高い方を売り、差が縮んだら決済します。指値で待つ新規建玉（maker）は停止中です。</p></details>
-    <details><summary>GMO コピー（OKX上位トレーダー）</summary><p>OKX上位トレーダーの建玉を5分ごとに集計。BTC・ETH・XRP・SOL・DOGEで1人1票の買い・売りの多数決に応じてGMOレバレッジを保有します。基本枠は70.8万円（60万円＋10/7入金分10.8万円）＋確定損益、維持率145%まで。票が消えれば決済します。</p></details>
+    <details><summary>GMO コピー（OKX・Binance上位トレーダー）</summary><p>OKX上位トレーダーの建玉を5分ごとに集計。BTC・ETH・XRP・SOL・DOGEで1人1票の買い・売りの多数決に応じてGMOレバレッジを保有します。基本枠は70.8万円（60万円＋10/7入金分10.8万円）＋確定損益、維持率145%まで。票が消えれば決済します。</p></details>
     <details><summary>Saxo ETF（清算中）</summary><p>ナスダック3倍ETF（TQQQ）と金ETF（GLDM）は清算中。米国市場時間に残りの保有を売却し、新規買いは停止しています。</p></details>
     <details><summary>Saxo 株・商品コピー（OKX上位トレーダー）</summary><p>OKX上位トレーダーの米国株・商品の建玉を5分ごとに集計。銘柄ごとに1人1票、買いを＋1・売りを−1として差し引き、純票数に応じて予算を配分します。分母は純票数の絶対値の合計と4の大きい方で、票が少ないと予算の一部だけを使います。SaxoのCFD（差金決済取引）で追随し、株と商品それぞれの市場時間に発注します。</p></details>
   </section>
@@ -822,20 +822,20 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   function renderCopy(k) {
-    const votes = k.votes || {}, tg = k.targets_jpy || {}, pos = k.positions || {};
+    const votes = k.votes || {}, tg = k.targets_jpy || {}, pos = k.positions || {}, bn = k.binance_votes || {};
     const coins = Object.keys(votes);
     const rows = coins.map((c) => {
       const v = votes[c] || 0, p = pos[c];
       const held = p ? `${p.side === "BUY" ? '<span class="pos">買</span>' : '<span class="neg">売</span>'} ${p.qty}` : '<span class="muted">なし</span>';
-      return `<div class="k">${esc(c)} <span class="muted" style="font-size:11px">票 ${v > 0 ? "+" : ""}${v}</span></div><div class="v">${held} <span class="muted" style="font-size:11px">目標 ${yen(tg[c] || 0)}</span></div>`;
+      return `<div class="k">${esc(c)} <span class="muted" style="font-size:11px">票 ${v > 0 ? "+" : ""}${v}${bn[c] ? `（Binance ${bn[c] > 0 ? "+" : ""}${bn[c]}）` : ""}</span></div><div class="v">${held} <span class="muted" style="font-size:11px">目標 ${yen(tg[c] || 0)}</span></div>`;
     }).join("");
     const closes = (feed.events || []).filter((e) => e.lane === "gmo_copy" && e.leg === "CLOSE" && e.accepted);
     const pnl = k.realized_pnl_jpy ?? closes.reduce((t, e) => t + (e.realized_pnl_jpy || 0), 0);
     $("laneCopy").innerHTML = `
-      <div class="lane-head"><div class="t">GMO コピー（OKX上位トレーダー）</div><div class="v ${cls(pnl + (k.unrealized_pnl_jpy ?? 0))}" style="font-size:15px">${signed(pnl + (k.unrealized_pnl_jpy ?? 0))}</div></div>
+      <div class="lane-head"><div class="t">GMO コピー（OKX・Binance上位トレーダー）</div><div class="v ${cls(pnl + (k.unrealized_pnl_jpy ?? 0))}" style="font-size:15px">${signed(pnl + (k.unrealized_pnl_jpy ?? 0))}</div></div>
       <div class="kv"><div class="k">損益の内訳（確定＋含み）</div><div class="v">${signed(pnl)} ＋ ${Number.isFinite(k.unrealized_pnl_jpy) ? signed(k.unrealized_pnl_jpy) : "含み 計測前"}</div>
       <div class="k">使える枠（上限 ${yen(k.cap_jpy ?? 708000)}＝基本枠${yen(Math.round((k.cap_jpy ?? 708000) - (k.realized_pnl_jpy ?? 0)))}（60万円＋10/7入金分）＋確定損益）</div><div class="v">${yen(k.budget_jpy)}</div>${rows}</div>
-      <div class="note">OKXの上位トレーダーの新規建玉を5分ごとに集計し、銘柄ごとに1人1票の多数決の向きでGMOレバレッジを保有。票が消えれば決済。損益は確定分（約定ベース）に、保有中ポジションの含み損益（取引所の評価値）を加えた合計。${(k.blockers || []).length ? " 制限: " + esc(k.blockers.join(" / ")) : ""}</div>${renderVariants()}`;
+      <div class="note">OKXの上位トレーダーに加え、10/20からBinanceの上位トレーダーの新規建玉も5分ごとに集計し（Binanceの収集が止まったときはOKXのみ）、銘柄ごとに1人1票の多数決の向きでGMOレバレッジを保有。票が消えれば決済。損益は確定分（約定ベース）に、保有中ポジションの含み損益（取引所の評価値）を加えた合計。${(k.blockers || []).length ? " 制限: " + esc(k.blockers.join(" / ")) : ""}</div>${renderVariants()}`;
   }
 
   const number = (v) => Number.isFinite(v) ? v.toLocaleString("ja-JP", { maximumFractionDigits: 4 }) : "—";
