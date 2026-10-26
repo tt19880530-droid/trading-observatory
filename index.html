@@ -746,7 +746,7 @@ header>div{min-width:0} header .btn{padding:8px}
 
   function renderVariants() {
     const report = feed.copy_variants || {}, variants = report.variants || {};
-    const names = { live_rule: "現行ルール", min_net_2: "純票差2以上", min_net_3: "純票差3以上",
+    const names = { live_rule: "旧ルール（上限なし・10/26まで）", min_net_2: "純票差2以上", min_net_3: "純票差3以上",
       min_denom_4: "分母下限4", min_denom_16: "分母下限16", inverse: "逆方向", no_rebalance_band: "調整幅なし" };
     const hours = report.coverage?.hours;
     const rows = Object.entries(variants).map(([name, v]) => `<tr><td>${esc(names[name] || "比較案")}</td><td class="${cls(v.total_pnl_jpy)}">${signed(v.total_pnl_jpy)}</td><td>${v.trades == null ? "—" : esc(v.trades)}</td><td>${yen(v.max_drawdown_jpy)}</td><td>${Number.isFinite(hours) ? hours.toFixed(1) + "h" : "—"}</td></tr>`).join("");
