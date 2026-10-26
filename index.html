@@ -201,7 +201,8 @@ header>div{min-width:0} header .btn{padding:8px}
     <section class="card" id="laneCopy"></section>
     <section class="card" id="laneSaxoCopy"></section>
   </div>
-  <div class="grid">
+  <div class="grid two">
+    <section class="card" id="laneNikkei"></section>
     <section class="card" id="laneArb"></section>
   </div>
   </div>
@@ -504,6 +505,7 @@ header>div{min-width:0} header .btn{padding:8px}
     renderCopy(f.lanes.gmo_copy || {});
     renderSaxoCopy(f.lanes.saxo_copy || {});
     renderArb(f.lanes.gmo_basis_arb || {});
+    renderNikkei(f.lanes.saxo_nikkei_fade || {});
     window.__codexTasks = f.codex_tasks || [];
     renderCodex(f.codex_tasks || []);
     renderResearch(f.research, f.codex_tasks || []);
@@ -925,6 +927,33 @@ header>div{min-width:0} header .btn{padding:8px}
       return `<details ${t.state === "running" ? "open" : ""}><summary><span class="pill ${st[0]}">${st[1]}</span> ${esc(t.name)} <span class="muted" style="font-size:11px">${jst(t.started_at)}${t.finished_at ? " → " + jst(t.finished_at) : ""}</span></summary>
         <pre style="white-space:pre-wrap;font-size:11px;max-height:320px;overflow:auto;margin:8px 0 0">${esc((t.log_tail || []).join("\n")) || "ログなし"}</pre></details>`;
     }).join("") : '<div class="empty">Codex への依頼はまだありません</div>';
+  }
+
+  const NIKKEI_BLOCKERS = {
+    OUTSIDE_TRADING_WINDOW: "売買時間外（9:00〜9:10に新規、15:00に決済）", JP225_NOT_IN_SESSION: "日経先物の取引時間外",
+    TOKYO_CASH_NOT_IN_SESSION: "東証の休場日", US_SIGNAL_STALE_OR_MISSING: "前日の米国データが未取得",
+    CLOSE_SETTLING_WAIT: "決済の反映待ち", ORDER_OUTCOME_UNKNOWN_WAIT: "注文結果の確認待ち", ORDER_OUTCOME_UNKNOWN: "注文結果が未確認",
+    CUM_LOSS_STOP: "累計−1万円に達したため停止", FAILED_POST_STOP: "注文の失敗が続いたため停止", KILL_SWITCH: "緊急停止中",
+    MARGIN_ABOVE_LIMIT: "証拠金使用率が上限超え", NO_RESERVED_MARGIN: "取り分けた証拠金がありません",
+    SAXO_TOKEN_EXPIRED_OR_MISSING_NO_REFRESH: "Saxoの認証切れ（再ログイン待ち）", JP225_QUOTE_INVALID_OR_WIDE: "価格が異常・スプレッドが広い"
+  };
+  function renderNikkei(n) {
+    const st = n.status === "OK" ? ["ok", "稼働中"] : n.status === "IDLE" ? ["ok", "待機中"] : n.status === "BLOCKED" ? ["warn", "停止条件あり"] : n.status ? ["bad", "取得エラー"] : ["warn", "データなし"];
+    const o = n.open, held = n.units_held > 0;
+    const pos = held && o ? `<span class="${o.side === "Buy" ? "pos" : "neg"}">${o.side === "Buy" ? "買" : "売"}</span> ${number(n.units_held)}単位（${jst(o.at)} 注文時 ${number(o.side === "Buy" ? o.ask : o.bid)}円）` : held ? `${number(n.units_held)}単位` : '<span class="muted">保有なし</span>';
+    const q = n.quote || {};
+    const rows = (n.live_recent || []).slice().reverse().map((e) => `<div class="hrow"><div>${e.op === "CLOSE" ? "決済" : "新規"} ${e.side === "Buy" ? "買" : "売"} ${number(e.amount)}<div class="sub muted" style="font-size:11px">${jst(e.at)}${e.op === "OPEN" ? " ・ " + number(e.side === "Buy" ? e.ask : e.bid) + "円" : ""}</div></div><span class="${cls(e.pnl_estimate_jpy)}">${e.pnl_estimate_jpy != null ? signed(e.pnl_estimate_jpy) : ""}</span></div>`).join("");
+    const blockers = (n.blockers || []).map((b) => NIKKEI_BLOCKERS[String(b).split(":")[0]] || b);
+    $("laneNikkei").innerHTML = `<div class="lane-head"><div class="t">Saxo 日経の逆張り（米国の前日の動きの逆）</div><div><span class="pill ${st[0]}">${st[1]}</span></div></div>
+      <div class="kv"><div class="k">保有</div><div class="v">${pos}</div>
+      <div class="k">今の価格（売り／買い）</div><div class="v">${q.bid != null ? number(q.bid) + " ／ " + number(q.ask) : "—"}</div>
+      <div class="k">含み損益</div><div class="v ${cls(n.unrealized_pnl_jpy)}">${signed(n.unrealized_pnl_jpy)}</div>
+      <div class="k">確定損益（${n.live_days || 0}日分）</div><div class="v ${cls(n.live_cum_pnl_jpy)}">${signed(n.live_cum_pnl_jpy)}</div>
+      <div class="k">累計（確定＋含み）</div><div class="v ${cls(n.lane_pnl_jpy)}">${signed(n.lane_pnl_jpy)}</div>
+      <div class="k">取り分けた証拠金</div><div class="v">${yen(n.reserve_jpy)}</div></div>
+      ${rows ? `<div aria-label="日経枠の直近の注文">${rows}</div>` : '<div class="empty">まだ注文はありません</div>'}
+      <div class="note">前夜の米国株が上げたら9:00に日経225先物CFDを売り、下げたら買う。15:00に決済、持ち越しなし。1単位、累計−1万円で自動停止。60営業日で判定。更新 ${jst(n.updated_at)}</div>
+      ${blockers.length ? `<div class="note warn">${blockers.map(esc).join(" / ")}</div>` : ""}`;
   }
 
   function renderArb(a) {
