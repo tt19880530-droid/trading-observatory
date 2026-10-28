@@ -227,7 +227,7 @@ header>div{min-width:0} header .btn{padding:8px}
   <h2>注文履歴・イベント</h2>
   <section class="card">
     <div class="tabs" id="evTabs">
-      <button data-l="" class="on">すべて</button><button data-l="gmo_crypto_trend">暗号トレンド</button><button data-l="gmo_copy">GMOコピー</button><button data-l="gmo_basis_arb">価格差</button><button data-l="saxo_etf_trend">Saxo ETF</button><button data-l="saxo_copy">Saxoコピー</button><button data-l="saxo_nikkei_fade">Saxo日経</button>
+      <button data-l="" class="on">すべて</button><button data-l="gmo_crypto_trend">暗号トレンド</button><button data-l="gmo_copy">GMOコピー</button><button data-l="gmo_basis_arb">価格差</button><button data-l="saxo_etf_trend">Saxo ETF</button><button data-l="saxo_copy">Saxoコピー</button><button data-l="saxo_nikkei_fade">Saxo日経</button><button data-l="saxo_usdjpy_fix">Saxo仲値</button>
     </div>
     <div class="events" id="events" style="margin-top:12px"></div>
   </section>
@@ -997,13 +997,13 @@ header>div{min-width:0} header .btn{padding:8px}
       ${open.length ? `<div class="chips">${open.map((o) => `<span class="chip">${o}</span>`).join("")}</div>` : ""}`;
   }
 
-  const LANE = { gmo_crypto_trend: ["暗号", "₿"], gmo_basis_arb: ["価格差", "⇄"], saxo_etf_trend: ["Saxo ETF", "S"], saxo_copy: ["Saxoコピー", "⧉"], gmo_copy: ["GMOコピー", "⧉"], saxo_nikkei_fade: ["Saxo日経", "N"] };
+  const LANE = { gmo_crypto_trend: ["暗号", "₿"], gmo_basis_arb: ["価格差", "⇄"], saxo_etf_trend: ["Saxo ETF", "S"], saxo_copy: ["Saxoコピー", "⧉"], gmo_copy: ["GMOコピー", "⧉"], saxo_nikkei_fade: ["Saxo日経", "N"], saxo_usdjpy_fix: ["Saxo仲値", "¥"] };
   function renderEvents(evs) {
     const list = evs.filter((e) => !evLane || e.lane === evLane).slice().reverse().slice(0, 60);
     $("events").innerHTML = list.map((e) => {
       const [ln, ic] = LANE[e.lane] || [e.lane, "•"];
       const what = e.leg || e.op || e.kind || "";
-      const sym = e.symbol || e.coin || e.contract || (e.lane === "saxo_nikkei_fade" ? "JP225" : "");
+      const sym = e.symbol || e.coin || e.contract || (e.lane === "saxo_nikkei_fade" ? "JP225" : e.lane === "saxo_usdjpy_fix" ? "USDJPY" : "");
       const failed = e.accepted === false || e.known === false || e.outcome_known === false;
       const pnl = e.est_pnl_jpy ?? e.realized_pnl_jpy ?? e.pnl_estimate_jpy;
       const amt = pnl != null ? `<span class="${cls(pnl)}">${signed(pnl)}</span>` : e.notional_jpy != null ? yen(e.notional_jpy) : "";
