@@ -961,7 +961,7 @@ header>div{min-width:0} header .btn{padding:8px}
       <div class="k">累計（確定＋含み）</div><div class="v ${cls(n.lane_pnl_jpy)}">${signed(n.lane_pnl_jpy)}</div>
       <div class="k">取り分けた証拠金</div><div class="v">${yen(n.reserve_jpy)}</div></div>
       ${rows ? `<div aria-label="日経枠の直近の注文">${rows}</div>` : '<div class="empty">まだ注文はありません</div>'}
-      <div class="note">前夜の米国株が上げたら9:00に日経225先物CFDを売り、下げたら買う。15:00に決済、持ち越しなし。10/27から5単位（10/26は1単位）、累計−2.5万円で自動停止。60営業日で判定。更新 ${jst(n.updated_at)}</div>
+      <div class="note">前夜の米国株が上げたら9:00に日経225先物CFDを売り、下げたら買う。15:00に決済、持ち越しなし。10/29から8単位（10/27〜28は5単位、10/26は1単位）、累計−4万円で自動停止。60営業日で判定。更新 ${jst(n.updated_at)}</div>
       ${blockers.length ? `<div class="note warn">${blockers.map(esc).join(" / ")}</div>` : ""}`;
   }
 
