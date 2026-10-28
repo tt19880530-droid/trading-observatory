@@ -13,7 +13,7 @@
 :root{
   --bg:#0b0f14;--panel:#121821;--panel2:#18202b;--line:#233042;--text:#e6edf5;--muted:#8a9bb0;
   --accent:#5eead4;--pos:#34d399;--neg:#f87171;--warn:#fbbf24;--c1:#5eead4;--c2:#a78bfa;--c3:#60a5fa;
-  --k-total:#f1f5f9;--k-gmo:#60a5fa;--k-saxo:#fb923c;--k-copy:#4ade80;--k-arb:#c084fc;--k-trend:#f43f5e;--k-trend2:#fbbf24;
+  --k-total:#f1f5f9;--k-gmo:#60a5fa;--k-saxo:#fb923c;--k-copy:#4ade80;--k-arb:#c084fc;--k-trend:#f43f5e;--k-trend2:#fbbf24;--k-nikkei:#22d3ee;
   --radius:16px;--gap:14px;color-scheme:dark;
   --sans:"IBM Plex Sans JP",-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
@@ -21,11 +21,11 @@
 @media (prefers-color-scheme:light){:root:not([data-theme="dark"]){color-scheme:light;
   --bg:#f4f6f8;--panel:#ffffff;--panel2:#eef2f6;--line:#dbe2ea;--text:#0e1726;--muted:#586a80;
   --accent:#0f8f82;--pos:#08875f;--neg:#c2362f;--warn:#a35d06;--c1:#0f8f82;--c2:#6d4bd6;--c3:#2563c9;
-  --k-total:#0e1726;--k-gmo:#2563c9;--k-saxo:#d9600a;--k-copy:#15803d;--k-arb:#9333ea;--k-trend:#e11d48;--k-trend2:#b45309;}}
+  --k-total:#0e1726;--k-gmo:#2563c9;--k-saxo:#d9600a;--k-copy:#15803d;--k-arb:#9333ea;--k-trend:#e11d48;--k-trend2:#b45309;--k-nikkei:#0e7490;}}
 :root[data-theme="light"]{color-scheme:light;
   --bg:#f4f6f8;--panel:#ffffff;--panel2:#eef2f6;--line:#dbe2ea;--text:#0e1726;--muted:#586a80;
   --accent:#0f8f82;--pos:#08875f;--neg:#c2362f;--warn:#a35d06;--c1:#0f8f82;--c2:#6d4bd6;--c3:#2563c9;
-  --k-total:#0e1726;--k-gmo:#2563c9;--k-saxo:#d9600a;--k-copy:#15803d;--k-arb:#9333ea;--k-trend:#e11d48;--k-trend2:#b45309;}
+  --k-total:#0e1726;--k-gmo:#2563c9;--k-saxo:#d9600a;--k-copy:#15803d;--k-arb:#9333ea;--k-trend:#e11d48;--k-trend2:#b45309;--k-nikkei:#0e7490;}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
 .wrap{max-width:980px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 16px 96px}
@@ -227,7 +227,7 @@ header>div{min-width:0} header .btn{padding:8px}
   <h2>注文履歴・イベント</h2>
   <section class="card">
     <div class="tabs" id="evTabs">
-      <button data-l="" class="on">すべて</button><button data-l="gmo_crypto_trend">暗号トレンド</button><button data-l="gmo_copy">GMOコピー</button><button data-l="gmo_basis_arb">価格差</button><button data-l="saxo_etf_trend">Saxo ETF</button><button data-l="saxo_copy">Saxoコピー</button>
+      <button data-l="" class="on">すべて</button><button data-l="gmo_crypto_trend">暗号トレンド</button><button data-l="gmo_copy">GMOコピー</button><button data-l="gmo_basis_arb">価格差</button><button data-l="saxo_etf_trend">Saxo ETF</button><button data-l="saxo_copy">Saxoコピー</button><button data-l="saxo_nikkei_fade">Saxo日経</button>
     </div>
     <div class="events" id="events" style="margin-top:12px"></div>
   </section>
@@ -519,7 +519,7 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   let calMonth = null, calMode = "day", calSel = null, calLane = "all";
-  const CAL_LANES = [["all", "全体"], ["copy", "GMOコピー"], ["arb", "価格差"], ["trend", "トレンド他"], ["saxo", "Saxoコピー"]];
+  const CAL_LANES = [["all", "全体"], ["copy", "GMOコピー"], ["arb", "価格差"], ["trend", "トレンド他"], ["saxo", "Saxoコピー"], ["nikkei", "Saxo日経"]];
   const dayKey = (t) => new Date(t).toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
   function dailyPnl(f) {
     const hist = f.equity_history || [], flows = f.capital_changes?.events || [];
@@ -540,7 +540,7 @@ header>div{min-width:0} header .btn{padding:8px}
                  dep: dp.total, cum, partial: i === 0 };
       prev = cur;
     });
-    const src = { copy: "gmo_copy", arb: "gmo_basis_arb", gmo: "gmo_crypto_trend", saxo: "saxo_copy" }, lastOf = {}, lp = {}, lc = {};
+    const src = { copy: "gmo_copy", arb: "gmo_basis_arb", gmo: "gmo_crypto_trend", saxo: "saxo_copy", nikkei: "saxo_nikkei_fade" }, lastOf = {}, lp = {}, lc = {};
     for (const [k, key] of Object.entries(src)) {
       lastOf[k] = new Map();
       (f.lane_pnl?.[key]?.points || []).filter((q) => Number.isFinite(q.pnl_jpy)).sort((a, b) => Date.parse(a.t) - Date.parse(b.t))
@@ -554,7 +554,7 @@ header>div{min-width:0} header .btn{padding:8px}
         dl[k] = v - lp[k]; lp[k] = v;
       }
       dl.trend = dl.gmo - dl.copy - dl.arb;
-      const l = { all: out[d].total, copy: dl.copy, arb: dl.arb, trend: dl.trend, saxo: dl.saxo }, c = {};
+      const l = { all: out[d].total, copy: dl.copy, arb: dl.arb, trend: dl.trend, saxo: dl.saxo, nikkei: dl.nikkei }, c = {};
       for (const k of Object.keys(l)) { lc[k] = (lc[k] || 0) + (l[k] || 0); c[k] = lc[k]; }
       out[d].lane = l; out[d].lcum = c;
     });
@@ -687,13 +687,22 @@ header>div{min-width:0} header .btn{padding:8px}
   const PNL_LANES = [
     ["total_all", "全体（GMO＋Saxo・入金除く）", "var(--text)"],
     ["gmo_copy", "GMOコピー", "var(--k-copy)"], ["gmo_basis_arb", "価格差", "var(--k-arb)"],
-    ["saxo_copy", "Saxoコピー（確定＋含み）", "var(--k-saxo)"],
+    ["saxo_copy", "Saxoコピー（確定＋含み）", "var(--k-saxo)"], ["saxo_nikkei_fade", "Saxo日経（確定＋含み）", "var(--k-nikkei)"],
     ["gmo_trend_only", "トレンド主体（推定）", "var(--k-trend)"], ["gmo_trend_measured", "トレンド実測（10/7〜）", "var(--k-trend2)"],
     ["gmo_crypto_trend", "GMO口座全体（トレンド含む）", "var(--k-gmo)"],
   ];
-  const PNL_DEFAULT = ["total_all", "gmo_copy", "gmo_basis_arb", "saxo_copy", "gmo_trend_measured"];
+  const PNL_DEFAULT = ["total_all", "gmo_copy", "gmo_basis_arb", "saxo_copy", "saxo_nikkei_fade", "gmo_trend_measured"];
   function pnlShown() {
-    try { const v = JSON.parse(localStorage.getItem("pnlShown")); if (Array.isArray(v)) return new Set(v); } catch (_) {}
+    try {
+      const v = JSON.parse(localStorage.getItem("pnlShown")), known = JSON.parse(localStorage.getItem("pnlKnown") || "null");
+      if (Array.isArray(v)) {  // lines added after the viewer saved a choice start visible
+        const seen = new Set(Array.isArray(known) ? known : PNL_LANES.map(([k]) => k).filter((k) => k !== "saxo_nikkei_fade"));
+        PNL_DEFAULT.forEach((k) => { if (!seen.has(k)) v.push(k); });
+        localStorage.setItem("pnlKnown", JSON.stringify(PNL_LANES.map(([k]) => k)));
+        localStorage.setItem("pnlShown", JSON.stringify(v));
+        return new Set(v);
+      }
+    } catch (_) {}
     return new Set(PNL_DEFAULT);
   }
   function drawPnlChart() {
@@ -988,17 +997,17 @@ header>div{min-width:0} header .btn{padding:8px}
       ${open.length ? `<div class="chips">${open.map((o) => `<span class="chip">${o}</span>`).join("")}</div>` : ""}`;
   }
 
-  const LANE = { gmo_crypto_trend: ["暗号", "₿"], gmo_basis_arb: ["価格差", "⇄"], saxo_etf_trend: ["Saxo ETF", "S"], saxo_copy: ["Saxoコピー", "⧉"], gmo_copy: ["GMOコピー", "⧉"] };
+  const LANE = { gmo_crypto_trend: ["暗号", "₿"], gmo_basis_arb: ["価格差", "⇄"], saxo_etf_trend: ["Saxo ETF", "S"], saxo_copy: ["Saxoコピー", "⧉"], gmo_copy: ["GMOコピー", "⧉"], saxo_nikkei_fade: ["Saxo日経", "N"] };
   function renderEvents(evs) {
     const list = evs.filter((e) => !evLane || e.lane === evLane).slice().reverse().slice(0, 60);
     $("events").innerHTML = list.map((e) => {
       const [ln, ic] = LANE[e.lane] || [e.lane, "•"];
       const what = e.leg || e.op || e.kind || "";
-      const sym = e.symbol || e.coin || "";
+      const sym = e.symbol || e.coin || e.contract || (e.lane === "saxo_nikkei_fade" ? "JP225" : "");
       const failed = e.accepted === false || e.known === false || e.outcome_known === false;
-      const pnl = e.est_pnl_jpy ?? e.realized_pnl_jpy;
+      const pnl = e.est_pnl_jpy ?? e.realized_pnl_jpy ?? e.pnl_estimate_jpy;
       const amt = pnl != null ? `<span class="${cls(pnl)}">${signed(pnl)}</span>` : e.notional_jpy != null ? yen(e.notional_jpy) : "";
-      const desc = /CLOSED/.test(what) || (what === "CLOSE" && ["gmo_copy", "saxo_copy"].includes(e.lane)) ? "決済" : failed ? "失敗・要確認" : `${what} ${e.side || ""} ${e.size ?? e.amount ?? ""}`;
+      const desc = /CLOSED/.test(what) || (what === "CLOSE" && ["gmo_copy", "saxo_copy", "saxo_nikkei_fade"].includes(e.lane)) ? "決済" : e.precheck && e.accepted === false ? `見送り（事前確認：${e.error === "WouldExceedMargin" ? "証拠金不足" : e.error || "不可"}）` : failed ? "失敗・要確認" : `${what} ${e.side || ""} ${e.size ?? e.amount ?? ""}`;
       return `<div class="ev"><div class="ic">${ic}</div><div><div>${esc(ln)} ・ ${esc(sym)} ・ <span class="${failed ? "neg" : ""}">${esc(desc)}</span></div><div class="sub">${jst(e.at)}${e.est_pnl_bps != null ? ` ・ ${e.est_pnl_bps}bp` : ""}</div></div><div class="amt">${amt}</div></div>`;
     }).join("") || '<div class="empty">まだ取引はありません</div>';
   }
