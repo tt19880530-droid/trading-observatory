@@ -259,10 +259,22 @@ header>div{min-width:0} header .btn{padding:8px}
   <section class="card" id="fpHead"><div class="empty">読み込み中</div></section>
   <h2>計画と実績の推移</h2>
   <section class="card">
-    <div class="tabs" id="fpRange" style="margin-bottom:8px"><button data-r="1" class="on">最初の1年</button><button data-r="3">3年</button><button data-r="0">10年全体</button></div>
+    <div class="tabs" id="fpRange" style="margin-bottom:8px"><button data-r="30" class="on">1か月</button><button data-r="90">3か月</button><button data-r="365">1年</button><button data-r="1096">3年</button><button data-r="0">10年</button></div>
     <div class="chart"><svg id="fpChart" role="img" aria-label="FIRE計画の目標推移と実際の評価額（円）"></svg><div class="tip" id="fpTip"></div></div>
     <div class="legend"><span><i style="background:var(--accent)"></i>計画（目標の推移）</span><span><i style="background:var(--muted)"></i>入金だけ（運用0%）</span><span><i style="background:var(--k-copy)"></i>実際の評価額（GMO＋Saxo）</span></div>
     <div class="note">計画線は、毎月の入金と6月・12月の追加入金を積み立てながら、必要な年利で増えた場合の推移です。入金だけの線との差が、運用で増やす必要がある分です。実際の評価額には本人確認済みの入金が含まれます。</div>
+  </section>
+  <h2>日ごとの達成（必要な日利との比較）</h2>
+  <section class="card">
+    <div id="fpDayHead"></div>
+    <div class="chart"><svg id="fpDayChart" role="img" aria-label="日ごとの運用利回りと必要な日利"></svg></div>
+    <div class="note">棒は日本時間の1日ごとの運用利回り（その日の入金を除く・前日終値比）。横線が必要な日利（暦日ベース）。緑は必要な日利以上、赤は未満。直近60日まで。</div>
+  </section>
+  <h2>月ごとの達成（必要な月利との比較）</h2>
+  <section class="card">
+    <div id="fpMonHead"></div>
+    <div class="chart"><svg id="fpMonChart" role="img" aria-label="月ごとの運用利回りと必要な月利"></svg></div>
+    <div class="note">棒は月ごとの運用利回り（その月の入金を除く・前月末比）。横線が必要な月利。今月は途中までの値です。</div>
   </section>
   <h2>毎年の目安</h2>
   <section class="card" id="fpYears"></section>
@@ -537,12 +549,53 @@ header>div{min-width:0} header .btn{padding:8px}
     renderFire(f.fire_plan);
   }
 
-  let fpRange = 1;
-  try { fpRange = Number(localStorage.getItem("obs.fpRange") ?? 1); } catch (e) {}
+  let fpRange = 30;
+  try { const v = localStorage.getItem("obs.fpRange2"); if (v != null) fpRange = Number(v); } catch (e) {}
+  const DAY = 864e5;
+  const jstDay = (t) => new Date(t).toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
+  function fpDailyPlan(fp, t0, t1) {
+    // Within each month the plan grows by the daily rate from that month's plan point (which includes its deposit).
+    const rd = Math.pow(1 + fp.required_rate, 1 / 365) - 1, pts = fp.plan_path.map((q) => [Date.parse(q.t), q.jpy]);
+    const dep = fp.deposit_path.map((q) => [Date.parse(q.t), q.jpy]), out = [], floor = [];
+    for (let t = t0; t <= t1; t += DAY) {
+      const i = pts.findLastIndex((p) => p[0] <= t), j = dep.findLastIndex((p) => p[0] <= t);
+      if (i < 0) continue;
+      out.push([t, pts[i][1] * Math.pow(1 + rd, (t - pts[i][0]) / DAY)]); floor.push([t, dep[Math.max(j, 0)][1]]);
+    }
+    return { plan: out, floor };
+  }
+  function fpReturns(fp) {
+    const dep = new Map(); (fp.deposits || []).forEach((d) => dep.set(d.t, (dep.get(d.t) || 0) + d.jpy));
+    const a = fp.actual || [], days = [], months = new Map();
+    let prev = fp.start_equity_jpy;
+    a.forEach((q, i) => {
+      const flow = dep.get(q.t) || 0, base = i === 0 ? fp.start_equity_jpy : prev;
+      if (i > 0 && base > 0) days.push({ t: q.t, r: (q.jpy - base - flow) / base });
+      const m = q.t.slice(0, 7), e = months.get(m) || { base, flow: 0, last: base };
+      e.flow += i > 0 ? flow : 0; e.last = q.jpy; months.set(m, e); prev = q.jpy;
+    });
+    return { days, months: [...months].map(([m, e]) => ({ t: m, r: e.base > 0 ? (e.last - e.base - e.flow) / e.base : 0 })) };
+  }
+  function fpBars(svg, rows, need, fmt, label) {
+    const W = svg.clientWidth || 340, H = 160, L = 44, R = 8, T = 10, B = 22;
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    if (!rows.length) { svg.innerHTML = `<text x="${W / 2}" y="80" text-anchor="middle" fill="var(--muted)" font-size="12">1${label}分のデータがたまると表示されます</text>`; return; }
+    const vals = rows.map((r) => r.r).concat([need, 0]), lo = Math.min(...vals), hi = Math.max(...vals), pad = (hi - lo) * 0.1 || 0.001;
+    const y0 = lo - pad, y1 = hi + pad, Y = (v) => T + (1 - (v - y0) / (y1 - y0)) * (H - T - B), bw = (W - L - R) / rows.length;
+    let g = "";
+    [y0 + (y1 - y0) * 0.1, 0, y1 - (y1 - y0) * 0.1].forEach((v) => { g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${L - 4}" y="${Y(v) + 3}" text-anchor="end" fill="var(--muted)" font-size="9">${fmt(v)}</text>`; });
+    rows.forEach((r, i) => { const x = L + i * bw + bw * 0.15, top = Y(Math.max(r.r, 0)), bot = Y(Math.min(r.r, 0));
+      g += `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" height="${Math.max(1, bot - top).toFixed(1)}" fill="var(--${r.r >= need ? "pos" : "neg"})"><title>${esc(r.t)} ${fmt(r.r)}</title></rect>`; });
+    g += `<line x1="${L}" x2="${W - R}" y1="${Y(need)}" y2="${Y(need)}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 3"/><text x="${L + 3}" y="${T + 9}" fill="var(--accent)" font-size="10">- - 必要 ${fmt(need)}</text>`;
+    const step = Math.ceil(rows.length / 6);
+    rows.forEach((r, i) => { if (i % step === 0) g += `<text x="${L + i * bw + bw / 2}" y="${H - 6}" text-anchor="middle" fill="var(--muted)" font-size="9">${esc(r.t.length > 7 ? r.t.slice(5).replace("-", "/") : r.t.slice(2).replace("-", "/"))}</text>`; });
+    svg.innerHTML = g;
+  }
   function renderFire(fp) {
     const head = $("fpHead"), svg = $("fpChart"), yrs = $("fpYears");
     if (!fp || !fp.plan_path) { head.innerHTML = '<div class="empty">計画データの初回生成待ちです</div>'; svg.innerHTML = yrs.innerHTML = ""; return; }
     const pct = (v) => v == null ? "—" : (v * 100).toFixed(1) + "%";
+    const rm = Math.pow(1 + fp.required_rate, 1 / 12) - 1, rd = Math.pow(1 + fp.required_rate, 1 / 365) - 1;
     const gap = fp.current_equity_jpy - fp.planned_now_jpy;
     head.innerHTML = `<div class="kv">
       <div class="k">目標</div><div class="v">${yen(fp.target_jpy)}（${esc(fp.end)}まで）</div>
@@ -550,31 +603,44 @@ header>div{min-width:0} header .btn{padding:8px}
       <div class="k">計画上の今の目安</div><div class="v">${yen(fp.planned_now_jpy)} <span class="${cls(gap)}">${signed(gap)}</span></div>
       <div class="k">開始からの入金（確認済み）</div><div class="v">${yen(fp.deposits_jpy)} <span class="muted">計画では${yen(fp.planned_deposits_jpy)}</span></div>
       <div class="k">開始からの運用損益</div><div class="v ${cls(fp.gain_jpy)}">${signed(fp.gain_jpy)}（${pct(fp.gain_pct_of_invested)}）</div>
-      <div class="k">必要な年利（税引き後）</div><div class="v">開始時 ${pct(fp.required_rate)} ／ 今から ${pct(fp.required_rate_from_now)}</div>
+      <div class="k">必要な利回り（税引き後）</div><div class="v">年${pct(fp.required_rate)} ／ 月${(rm * 100).toFixed(2)}% ／ 日${(rd * 100).toFixed(3)}%<div class="muted" style="font-size:11px">今から: 年${pct(fp.required_rate_from_now)}</div></div>
       <div class="k">入金の計画</div><div class="v">毎月${yen(fp.monthly_deposit_jpy)}＋${fp.bonus_months.join("・")}月に${yen(fp.bonus_deposit_jpy)}</div></div>
-      <div class="note">開始 ${esc(fp.start.slice(0, 10))}（評価額${yen(fp.start_equity_jpy)}）。計画書: ${esc(fp.doc)}。運用口座の合計が最高値から30%下がったら入金を止めて原因を確認、毎年11月に見直し（2年続けて目安を下回ったら期間か目標を見直す）。税金は暗号資産が給与と合算で最大55%、Saxoは約20%。</div>`;
+      <div class="note">開始 ${esc(fp.start.slice(0, 10))}（評価額${yen(fp.start_equity_jpy)}）。計画書: ${esc(fp.doc)}。運用口座の合計が最高値から30%下がったら入金を止めて原因を確認、毎年11月に見直し（2年続けて目安を下回ったら期間か目標を見直す）。税金は暗号資産が給与と合算で最大55%、Saxoは約20%。日利は暦日（年365日）で換算。</div>`;
     document.querySelectorAll("#fpRange button").forEach((b) => { b.classList.toggle("on", Number(b.dataset.r) === fpRange);
-      b.onclick = () => { fpRange = Number(b.dataset.r); try { localStorage.setItem("obs.fpRange", fpRange); } catch (e) {} renderFire(fp); }; });
-    const t0 = Date.parse(fp.start), tEnd = fpRange ? t0 + fpRange * 365.25 * 864e5 : Date.parse(fp.end);
-    const inR = (q) => Date.parse(q.t) <= tEnd + 864e5 * 31;
-    const S = [["plan_path", "var(--accent)", 2, ""], ["deposit_path", "var(--muted)", 1.5, "4 3"], ["actual", "var(--k-copy)", 2.5, ""]]
-      .map(([k, c, w, d]) => ({ k, c, w, d, pts: (fp[k] || []).filter(inR).map((q) => [Date.parse(q.t), q.jpy]) }));
+      b.onclick = () => { fpRange = Number(b.dataset.r); try { localStorage.setItem("obs.fpRange2", fpRange); } catch (e) {} renderFire(fp); }; });
+    const t0 = Date.parse(fp.start), tEnd = fpRange ? t0 + fpRange * DAY : Date.parse(fp.end);
+    const actual = (fp.actual || []).map((q) => [Date.parse(q.t + "T15:00:00+09:00"), q.jpy]).filter((p) => p[0] <= tEnd + DAY);
+    let plan, floor;
+    if (fpRange && fpRange <= 400) ({ plan, floor } = fpDailyPlan(fp, t0, tEnd));
+    else { const inR = (q) => Date.parse(q.t) <= tEnd + 31 * DAY;
+      plan = fp.plan_path.filter(inR).map((q) => [Date.parse(q.t), q.jpy]); floor = fp.deposit_path.filter(inR).map((q) => [Date.parse(q.t), q.jpy]); }
+    const S = [[plan, "var(--accent)", 2, ""], [floor, "var(--muted)", 1.5, "4 3"], [actual, "var(--k-copy)", 2.5, ""]];
     const W = svg.clientWidth || 340, H = 220, L = 52, R = 10, T = 10, B = 24;
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    const all = S.flatMap((s) => s.pts), xMax = Math.max(tEnd, ...all.map((p) => p[0]));
-    const yMax = Math.max(...all.map((p) => p[1])) * 1.05, yMin = 0;
+    const all = S.flatMap((x) => x[0]), xMax = Math.max(tEnd, ...all.map((p) => p[0]));
+    const vMax = Math.max(...all.map((p) => p[1])), vMin = Math.min(...all.map((p) => p[1]));
+    const yMax = vMax + (vMax - vMin) * 0.08 + 1, yMin = fpRange && fpRange <= 400 ? Math.max(0, vMin - (vMax - vMin) * 0.08 - 1) : 0;
     const X = (t) => L + (t - t0) / (xMax - t0) * (W - L - R), Y = (v) => T + (1 - (v - yMin) / (yMax - yMin)) * (H - T - B);
-    const man = (v) => v >= 1e7 ? (v / 1e7).toFixed(v >= 1e8 ? 0 : 1) + "千万" : v >= 1e4 ? Math.round(v / 1e4) + "万" : Math.round(v);
+    const man = (v) => v >= 1e7 ? (v / 1e7).toFixed(v >= 1e8 ? 0 : 1) + "千万" : v >= 1e4 ? (v / 1e4).toFixed(v < 1e5 ? 1 : 0) + "万" : Math.round(v);
     let g = "";
     for (let i = 0; i <= 4; i++) { const v = yMin + (yMax - yMin) * i / 4;
       g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" fill="var(--muted)" font-size="10">${man(v)}</text>`; }
-    const years = new Set();
-    for (const q of fp.plan_path) { const y = q.t.slice(0, 4), t = Date.parse(q.t); if (q.t.slice(5, 7) === "01" && t <= xMax && !years.has(y)) { years.add(y);
-      g += `<text x="${X(t)}" y="${H - 6}" text-anchor="middle" fill="var(--muted)" font-size="10">${y}</text>`; } }
-    for (const s of S) if (s.pts.length) g += `<path d="${s.pts.map((p, k) => `${k ? "L" : "M"}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join("")}" fill="none" stroke="${s.c}" stroke-width="${s.w}"${s.d ? ` stroke-dasharray="${s.d}"` : ""} stroke-linejoin="round"/>`;
-    const last = S[2].pts[S[2].pts.length - 1];
+    const span = (xMax - t0) / DAY, step = span <= 40 ? 7 : span <= 120 ? 14 : span <= 400 ? 61 : span <= 1200 ? 182 : 365;
+    for (let t = t0; t <= xMax; t += step * DAY) { const d = new Date(t + 9 * 3600e3);
+      const lab = span <= 400 ? `${d.getUTCMonth() + 1}/${d.getUTCDate()}` : step < 365 ? `${String(d.getUTCFullYear()).slice(2)}/${d.getUTCMonth() + 1}` : `${d.getUTCFullYear()}`;
+      g += `<text x="${X(t)}" y="${H - 6}" text-anchor="middle" fill="var(--muted)" font-size="10">${lab}</text>`; }
+    for (const [pts, c, w, d] of S) if (pts.length) g += `<path d="${pts.map((p, k) => `${k ? "L" : "M"}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join("")}" fill="none" stroke="${c}" stroke-width="${w}"${d ? ` stroke-dasharray="${d}"` : ""} stroke-linejoin="round"/>`;
+    const last = actual[actual.length - 1];
     if (last) g += `<circle cx="${X(last[0])}" cy="${Y(last[1])}" r="3.5" fill="var(--k-copy)"/>`;
     svg.innerHTML = g;
+    const ret = fpReturns(fp), dys = ret.days.slice(-60), mos = ret.months;
+    const comp = (rs) => rs.reduce((a, x) => a * (1 + x.r), 1) - 1;
+    const p2 = (v) => (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(2) + "%", p3 = (v) => (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(3) + "%";
+    $("fpDayHead").innerHTML = ret.days.length ? `<div class="kv"><div class="k">必要な日利以上の日</div><div class="v">${ret.days.filter((x) => x.r >= rd).length} / ${ret.days.length}日</div>
+      <div class="k">開始からの複利（実績 / 必要）</div><div class="v"><span class="${cls(comp(ret.days) - (Math.pow(1 + rd, ret.days.length) - 1))}">${p2(comp(ret.days))}</span> / ${p2(Math.pow(1 + rd, ret.days.length) - 1)}</div></div>` : "";
+    fpBars($("fpDayChart"), dys, rd, p3, "日");
+    $("fpMonHead").innerHTML = mos.length ? `<div class="kv"><div class="k">必要な月利以上の月</div><div class="v">${mos.filter((x) => x.r >= rm).length} / ${mos.length}か月（今月は途中）</div></div>` : "";
+    fpBars($("fpMonChart"), mos, rm, p2, "か月");
     const rows = fp.plan_path.filter((q) => q.t.slice(5) === fp.start.slice(5, 10) || q.t.slice(5, 7) === fp.start.slice(5, 7) && q.t.slice(8) === "01");
     const dep = new Map(fp.deposit_path.map((q) => [q.t, q.jpy]));
     yrs.innerHTML = `<div style="overflow-x:auto"><table class="variants" aria-label="毎年の目安"><thead><tr><th>時点</th><th>計画の目安</th><th>うち入金</th><th>運用で増やす分</th></tr></thead><tbody>${
