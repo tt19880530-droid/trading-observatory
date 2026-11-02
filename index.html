@@ -513,6 +513,14 @@ header>div{min-width:0} header .btn{padding:8px}
     const p = $("freshPill");
     p.className = "pill " + (age < 90 ? "ok" : age < 240 ? "warn" : "bad");
     p.textContent = age < 90 ? "最新" : `データが${Math.round(age / 60)}時間前`;
+    // A lane that could not read its broker (network/auth down) is shown at its last value; say so.
+    const failed = (l) => /FAIL|ERROR/.test(String(l?.status || "")) || l?.auth_expired;
+    const carried = [...new Set([...(f.equity_carried_forward || []).filter((k) => !k.endsWith("_suspect")),
+      ...(failed(f.lanes?.gmo_crypto_trend) ? ["gmo_crypto"] : []), ...(failed(f.lanes?.saxo_copy) ? ["saxo"] : [])])];
+    if (age < 90 && carried.length) {
+      p.className = "pill warn";
+      p.textContent = `${carried.map((k) => k === "saxo" ? "Saxo" : "GMO").join("・")}は前回値（取得できず）`;
+    }
     $("total").textContent = yen(f.total_equity_jpy);
     // Change over the window, excluding owner-confirmed deposits dated inside it, with a percentage.
     const flows = (f.capital_changes?.events || []);
