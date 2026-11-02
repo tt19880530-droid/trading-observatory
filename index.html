@@ -155,7 +155,7 @@ header>div{min-width:0} header .btn{padding:8px}
   </section>
 
   <nav class="tabs pagetabs" id="pageTabs" aria-label="表示切替">
-    <button data-p="overview" class="on">概要</button><button data-p="orders">注文履歴</button><button data-p="household">家計</button><button data-p="tax">税金</button><button data-p="weights">票の重み</button><button data-p="ops">運用</button><button data-p="ai">AI直感</button><button data-p="research">研究</button><button data-p="tasks">依頼・進捗</button>
+    <button data-p="overview" class="on">概要</button><button data-p="orders">注文履歴</button><button data-p="household">家計</button><button data-p="tax">税金</button><button data-p="fp">FP</button><button data-p="weights">票の重み</button><button data-p="ops">運用</button><button data-p="ai">AI直感</button><button data-p="research">研究</button><button data-p="tasks">依頼・進捗</button>
   </nav>
 
   <div class="page" id="page-overview">
@@ -252,6 +252,20 @@ header>div{min-width:0} header .btn{padding:8px}
   <section class="card" id="aiLearn"></section>
   <h2>決済済みの取引</h2>
   <section class="card" id="aiTrades"></section>
+  </div>
+
+  <div class="page" id="page-fp" hidden>
+  <h2>FIRE計画（運用口座だけで5,700万円）</h2>
+  <section class="card" id="fpHead"><div class="empty">読み込み中</div></section>
+  <h2>計画と実績の推移</h2>
+  <section class="card">
+    <div class="tabs" id="fpRange" style="margin-bottom:8px"><button data-r="1" class="on">最初の1年</button><button data-r="3">3年</button><button data-r="0">10年全体</button></div>
+    <div class="chart"><svg id="fpChart" role="img" aria-label="FIRE計画の目標推移と実際の評価額（円）"></svg><div class="tip" id="fpTip"></div></div>
+    <div class="legend"><span><i style="background:var(--accent)"></i>計画（目標の推移）</span><span><i style="background:var(--muted)"></i>入金だけ（運用0%）</span><span><i style="background:var(--k-copy)"></i>実際の評価額（GMO＋Saxo）</span></div>
+    <div class="note">計画線は、毎月の入金と6月・12月の追加入金を積み立てながら、必要な年利で増えた場合の推移です。入金だけの線との差が、運用で増やす必要がある分です。実際の評価額には本人確認済みの入金が含まれます。</div>
+  </section>
+  <h2>毎年の目安</h2>
+  <section class="card" id="fpYears"></section>
   </div>
 
   <div class="page" id="page-research" hidden>
@@ -520,6 +534,51 @@ header>div{min-width:0} header .btn{padding:8px}
     renderWeights(f.copy_ranking);
     renderAi(f.ai_intuition, f.ai_intuition_codex);
     renderTasks(f.tasks);
+    renderFire(f.fire_plan);
+  }
+
+  let fpRange = 1;
+  try { fpRange = Number(localStorage.getItem("obs.fpRange") ?? 1); } catch (e) {}
+  function renderFire(fp) {
+    const head = $("fpHead"), svg = $("fpChart"), yrs = $("fpYears");
+    if (!fp || !fp.plan_path) { head.innerHTML = '<div class="empty">計画データの初回生成待ちです</div>'; svg.innerHTML = yrs.innerHTML = ""; return; }
+    const pct = (v) => v == null ? "—" : (v * 100).toFixed(1) + "%";
+    const gap = fp.current_equity_jpy - fp.planned_now_jpy;
+    head.innerHTML = `<div class="kv">
+      <div class="k">目標</div><div class="v">${yen(fp.target_jpy)}（${esc(fp.end)}まで）</div>
+      <div class="k">今の評価額</div><div class="v">${yen(fp.current_equity_jpy)}（目標の${pct(fp.progress)}）</div>
+      <div class="k">計画上の今の目安</div><div class="v">${yen(fp.planned_now_jpy)} <span class="${cls(gap)}">${signed(gap)}</span></div>
+      <div class="k">開始からの入金（確認済み）</div><div class="v">${yen(fp.deposits_jpy)} <span class="muted">計画では${yen(fp.planned_deposits_jpy)}</span></div>
+      <div class="k">開始からの運用損益</div><div class="v ${cls(fp.gain_jpy)}">${signed(fp.gain_jpy)}（${pct(fp.gain_pct_of_invested)}）</div>
+      <div class="k">必要な年利（税引き後）</div><div class="v">開始時 ${pct(fp.required_rate)} ／ 今から ${pct(fp.required_rate_from_now)}</div>
+      <div class="k">入金の計画</div><div class="v">毎月${yen(fp.monthly_deposit_jpy)}＋${fp.bonus_months.join("・")}月に${yen(fp.bonus_deposit_jpy)}</div></div>
+      <div class="note">開始 ${esc(fp.start.slice(0, 10))}（評価額${yen(fp.start_equity_jpy)}）。計画書: ${esc(fp.doc)}。運用口座の合計が最高値から30%下がったら入金を止めて原因を確認、毎年11月に見直し（2年続けて目安を下回ったら期間か目標を見直す）。税金は暗号資産が給与と合算で最大55%、Saxoは約20%。</div>`;
+    document.querySelectorAll("#fpRange button").forEach((b) => { b.classList.toggle("on", Number(b.dataset.r) === fpRange);
+      b.onclick = () => { fpRange = Number(b.dataset.r); try { localStorage.setItem("obs.fpRange", fpRange); } catch (e) {} renderFire(fp); }; });
+    const t0 = Date.parse(fp.start), tEnd = fpRange ? t0 + fpRange * 365.25 * 864e5 : Date.parse(fp.end);
+    const inR = (q) => Date.parse(q.t) <= tEnd + 864e5 * 31;
+    const S = [["plan_path", "var(--accent)", 2, ""], ["deposit_path", "var(--muted)", 1.5, "4 3"], ["actual", "var(--k-copy)", 2.5, ""]]
+      .map(([k, c, w, d]) => ({ k, c, w, d, pts: (fp[k] || []).filter(inR).map((q) => [Date.parse(q.t), q.jpy]) }));
+    const W = svg.clientWidth || 340, H = 220, L = 52, R = 10, T = 10, B = 24;
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    const all = S.flatMap((s) => s.pts), xMax = Math.max(tEnd, ...all.map((p) => p[0]));
+    const yMax = Math.max(...all.map((p) => p[1])) * 1.05, yMin = 0;
+    const X = (t) => L + (t - t0) / (xMax - t0) * (W - L - R), Y = (v) => T + (1 - (v - yMin) / (yMax - yMin)) * (H - T - B);
+    const man = (v) => v >= 1e7 ? (v / 1e7).toFixed(v >= 1e8 ? 0 : 1) + "千万" : v >= 1e4 ? Math.round(v / 1e4) + "万" : Math.round(v);
+    let g = "";
+    for (let i = 0; i <= 4; i++) { const v = yMin + (yMax - yMin) * i / 4;
+      g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" fill="var(--muted)" font-size="10">${man(v)}</text>`; }
+    const years = new Set();
+    for (const q of fp.plan_path) { const y = q.t.slice(0, 4), t = Date.parse(q.t); if (q.t.slice(5, 7) === "01" && t <= xMax && !years.has(y)) { years.add(y);
+      g += `<text x="${X(t)}" y="${H - 6}" text-anchor="middle" fill="var(--muted)" font-size="10">${y}</text>`; } }
+    for (const s of S) if (s.pts.length) g += `<path d="${s.pts.map((p, k) => `${k ? "L" : "M"}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join("")}" fill="none" stroke="${s.c}" stroke-width="${s.w}"${s.d ? ` stroke-dasharray="${s.d}"` : ""} stroke-linejoin="round"/>`;
+    const last = S[2].pts[S[2].pts.length - 1];
+    if (last) g += `<circle cx="${X(last[0])}" cy="${Y(last[1])}" r="3.5" fill="var(--k-copy)"/>`;
+    svg.innerHTML = g;
+    const rows = fp.plan_path.filter((q) => q.t.slice(5) === fp.start.slice(5, 10) || q.t.slice(5, 7) === fp.start.slice(5, 7) && q.t.slice(8) === "01");
+    const dep = new Map(fp.deposit_path.map((q) => [q.t, q.jpy]));
+    yrs.innerHTML = `<div style="overflow-x:auto"><table class="variants" aria-label="毎年の目安"><thead><tr><th>時点</th><th>計画の目安</th><th>うち入金</th><th>運用で増やす分</th></tr></thead><tbody>${
+      rows.map((q) => `<tr><td>${esc(q.t.slice(0, 7))}</td><td>${yen(q.jpy)}</td><td>${yen(dep.get(q.t))}</td><td>${yen(q.jpy - (dep.get(q.t) || 0))}</td></tr>`).join("")}</tbody></table></div>`;
   }
 
   let calMonth = null, calMode = "day", calSel = null, calLane = "all";
@@ -1112,7 +1171,7 @@ header>div{min-width:0} header .btn{padding:8px}
   $("sCancel").onclick = () => dlg.close();
   $("sSave").onclick = () => { store.set("obs.token", $("sToken").value.trim()); store.set("obs.repo", $("sRepo").value.trim()); store.set("obs.branch", $("sBranch").value.trim()); dlg.close(); load(); };
   $("refresh").onclick = load;
-  window.addEventListener("resize", () => { if (feed) { drawChart(feed.equity_history || []); drawPnlChart(); } });
+  window.addEventListener("resize", () => { if (feed) { drawChart(feed.equity_history || []); drawPnlChart(); renderFire(feed.fire_plan); } });
   if (window.__OBS_FEED__) { feed = window.__OBS_FEED__; dropFailedSaxoReads(feed); render(); } else {
     try { const cached = JSON.parse(localStorage.getItem("obs.feedCache")); if (cached && cached.generated_at) { feed = cached; dropFailedSaxoReads(feed); render(); } } catch (_) {}
     load(); setInterval(load, 60000);
