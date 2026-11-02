@@ -195,6 +195,9 @@ header>div{min-width:0} header .btn{padding:8px}
     <details class="note"><summary>各線の説明</summary>全体：GMO＋Saxo全口座の評価額の増減（確認済みの入出金3件を除く）。ここが実際の総損益です。トレンド実測と推定が一致しないのは、実測がトレンドの保有分だけの評価額変化なのに対し、推定は口座全体の増減から他を引いた残りで、価格差の含み損益・手数料・スワップ（コピーの手数料・carry推定約2.5千円は推定線に流れ込みます）・コピー推定の誤差・GMO評価額の30分更新ずれが全部混ざるためです。トレンド実測：2026-10-07からトレンド側が評価額を毎回記録しており、評価額の変化から買い増し・売却の額を除いた損益（記録開始前は測れません）。トレンド主体（推定）：GMO口座全体の増減からコピーと価格差の確定損益を引いた残り。トレンド売買に加え、コピーなど未決済ポジションの含み損益・手数料・スワップを含むため参考値です。GMO口座全体：評価額の増減（確認済みの入出金を除く＝損益、トレンド・コピー・価格差を含む）。GMOコピー：確定損益＋保有中ポジションの含み損益（含みは記録開始以降）。トレンド主体はコピーの含み損益も引いてあります。Saxoコピー：CFD口座の残高増減（決済＋含み損益）。価格差：決済損益（約定ベース、一部推定）。GMO口座は2026-10-02に10万円を入金（グラフでは入金分を除外）。Saxo ETF口座はCFD口座へ振替中のため損益線なし。残高増減を損益線として描画しません。各戦略の数値は口座全体の損益ではありません。</details>
   </section>
 
+  <h2>資金効率（証拠金1万円を1時間使って何円）</h2>
+  <section class="card" id="effCard"></section>
+
   <h2>口座・戦略の状況</h2>
   <div class="grid two">
     <section class="card" id="laneCrypto"></section>
@@ -536,6 +539,7 @@ header>div{min-width:0} header .btn{padding:8px}
     renderSaxoCopy(f.lanes.saxo_copy || {});
     renderArb(f.lanes.gmo_basis_arb || {});
     renderNikkei(f.lanes.saxo_nikkei_fade || {});
+    renderEfficiency(f.capital_efficiency || {});
     window.__codexTasks = f.codex_tasks || [];
     renderCodex(f.codex_tasks || []);
     renderResearch(f.research, f.codex_tasks || []);
@@ -1076,6 +1080,29 @@ header>div{min-width:0} header .btn{padding:8px}
     MARGIN_ABOVE_LIMIT: "証拠金使用率が上限超え", NO_RESERVED_MARGIN: "取り分けた証拠金がありません",
     SAXO_TOKEN_EXPIRED_OR_MISSING_NO_REFRESH: "Saxoの認証切れ（再ログイン待ち）", JP225_QUOTE_INVALID_OR_WIDE: "価格が異常・スプレッドが広い"
   };
+  function renderEfficiency(e) {
+    const rows = (e.rows || []).filter((r) => Number.isFinite(r.yen_per_10k_hour));
+    if (!rows.length) { $("effCard").innerHTML = `<div class="note">まだ計算できるデータがありません</div>`; return; }
+    const FEW = 100;  // fewer hours in use than this: one or two trades decide the number
+    const solid = rows.filter((r) => r.hours_in_use >= FEW);
+    const scale = Math.max(...(solid.length ? solid : rows).map((r) => Math.abs(r.yen_per_10k_hour))) || 1;
+    const pct = (v) => v == null ? "—" : `${v >= 0 ? "+" : "−"}${Math.abs(v).toLocaleString("ja-JP", { maximumFractionDigits: 0 })}%`;
+    const per = (v) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(Math.abs(v) >= 10 ? 0 : 2)}円`;
+    $("effCard").innerHTML = rows.map((r) => {
+      const v = r.yen_per_10k_hour, w = Math.min(1, Math.abs(v) / scale) * 50, few = r.hours_in_use < FEW;
+      const color = v >= 0 ? "var(--pos)" : "var(--neg)";
+      return `<div style="margin:10px 0 2px">
+        <div style="display:flex;justify-content:space-between;gap:8px;font-size:13px"><b>${esc(r.name)}${few ? ` <span class="muted" style="font-size:11px;font-weight:400">参考・使用${r.hours_in_use}時間</span>` : ""}</b><b class="${cls(v)}">${per(v)}</b></div>
+        <div style="position:relative;height:10px;background:var(--line);border-radius:3px;margin:4px 0;opacity:${few ? .55 : 1}">
+          <div style="position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--muted)"></div>
+          <div style="position:absolute;top:0;bottom:0;${v >= 0 ? "left:50%" : `left:${50 - w}%`};width:${w}%;background:${color};border-radius:3px"></div>
+          ${Math.abs(v) > scale ? `<span style="position:absolute;${v >= 0 ? "right:-2px" : "left:-2px"};top:-4px;font-size:11px;color:${color}">${v >= 0 ? "▶" : "◀"}</span>` : ""}
+        </div>
+        <div class="muted" style="font-size:11px;display:flex;flex-wrap:wrap;gap:4px 12px"><span>損益 ${signed(r.pnl_jpy)}（${r.days}日）</span><span>使用中の平均証拠金 ${yen(r.avg_margin_in_use_jpy)}</span><span>使っている時間 ${Math.round(r.in_use_share * 100)}%</span><span>使用中の年率 ${pct(r.annual_pct_in_use)}</span></div>
+      </div>`;
+    }).join("") + `<div class="note">戦略ごとに「損益 ÷（証拠金 × 使った時間）」を1万円・1時間あたりに直した値。昼だけ・五十日だけの戦略と24時間の戦略を同じものさしで比べ、振替でお金を寄せる先を選ぶための指標です。棒の長さは使用100時間以上の戦略の最大値に合わせ、それを超える分は▶◀で示します。「参考」は使用時間が短く1〜2回の取引で決まっている値です。${esc(e.note || "")}</div>`;
+  }
+
   function renderNikkei(n) {
     const st = n.status === "OK" ? ["ok", "稼働中"] : n.status === "IDLE" ? ["ok", "待機中"] : n.status === "BLOCKED" ? ["warn", "停止条件あり"] : n.status ? ["bad", "取得エラー"] : ["warn", "データなし"];
     const o = n.open, held = n.units_held > 0;
