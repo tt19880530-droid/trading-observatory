@@ -909,7 +909,7 @@ header>div{min-width:0} header .btn{padding:8px}
     $("laneCopy").innerHTML = `
       <div class="lane-head"><div class="t">GMO コピー（OKX・Binance上位トレーダー）</div><div class="v ${cls(pnl + (k.unrealized_pnl_jpy ?? 0))}" style="font-size:15px">${signed(pnl + (k.unrealized_pnl_jpy ?? 0))}</div></div>
       <div class="kv"><div class="k">損益の内訳（確定＋含み、確定は売買手数料${yen(k.trading_fee_jpy || 0)}とレバレッジ手数料の推定${yen(k.leverage_fee_est_jpy || 0)}を控除後）</div><div class="v">${signed(pnl)} ＋ ${Number.isFinite(k.unrealized_pnl_jpy) ? signed(k.unrealized_pnl_jpy) : "含み 計測前"}</div>
-      <div class="k">使える枠（上限 ${yen(k.cap_jpy ?? 708000)}＝基本枠${yen(Math.round((k.cap_jpy ?? 708000) - (k.realized_pnl_jpy ?? 0)))}（60万円＋10/7入金分）＋確定損益。トレンド休止中は証拠金の余力全体、10/31から目標は一律1.5倍）</div><div class="v">${yen(k.budget_jpy)}</div>${rows}</div>
+      <div class="k">使える枠（上限 ${yen(k.cap_jpy)}＝GMO口座の評価額×1.13で、利益・損失・入金で伸び縮み。トレンド休止中は証拠金の余力全体、10/31から目標は一律1.5倍）</div><div class="v">${yen(k.budget_jpy)}</div>${rows}</div>
       <div class="note">OKXの上位トレーダーに加え、10/20からBinanceの上位トレーダーの新規建玉も5分ごとに集計し（Binanceの収集が止まったときはOKXのみ）、銘柄ごとに1人1票の多数決の向きでGMOレバレッジを保有。票が消えれば決済。損益は確定分（約定ベース）に、保有中ポジションの含み損益（取引所の評価値）を加えた合計。${(k.blockers || []).length ? " 制限: " + esc(k.blockers.join(" / ")) : ""}</div>${renderVariants()}`;
   }
 
