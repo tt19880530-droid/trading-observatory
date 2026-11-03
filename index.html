@@ -963,8 +963,8 @@ header>div{min-width:0} header .btn{padding:8px}
       <div class="chips"><span class="pill ok">11/3再開・CFD口座で保有</span>
         <span class="chip">ナスダック 200日線 ${on === true ? '<span class="pos">上 ▲</span>' : on === false ? '<span class="neg">下 ▼</span>' : "—"}</span></div>
       <div class="kv">${rows || '<div class="k">保有</div><div class="v muted">なし</div>'}
-        <div class="k">目標配分</div><div class="v">TQQQ 株口座の半分（200日線より上の間のみ）／金 商品口座の全額</div></div>
-      <div class="note">右上の金額は11/3 12:00の切り替え時点からの損益（株・商品CFD口座の決済＋含み損益）。ナスダックが200日線を下回るとTQQQを売却し、金だけ残します。発注は米国市場時間のみ。旧ETF口座は使っていません。</div>`;
+        <div class="k">目標配分</div><div class="v">TQQQ 半分／金 全額</div></div>
+      <div class="note">右上の金額は11/3 12:00の切り替え時点からの損益（株・商品CFD口座の決済＋含み損益）。TQQQは株口座の半分（ナスダックが200日線より上の間のみ）、金は商品口座の全額。200日線を下回るとTQQQを売却し、金だけ残します。発注は米国市場時間のみ。旧ETF口座は使っていません。</div>`;
   }
 
   function shadowHold(w) {
