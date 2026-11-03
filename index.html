@@ -316,7 +316,7 @@ header>div{min-width:0} header .btn{padding:8px}
     <details><summary>急騰追随</summary><p>BTC・ETH・XRPで、確定した1時間足の上昇が過去30日の標準偏差の2.5倍を超えたら、口座の15%をレバレッジで買い、12時間後に決済。</p></details>
     <details><summary>現物⇄レバレッジ 価格差</summary><p>GMOの現物とレバレッジの価格差を監視。成行側の新規建玉基準は30bp以上（0.30%）。安い方を買い、高い方を売り、差が縮んだら決済します。指値で待つ新規建玉（maker）は停止中です。</p></details>
     <details><summary>GMO コピー（OKX・Binance上位トレーダー）</summary><p>OKX上位トレーダーの建玉を5分ごとに集計。BTC・ETH・XRP・SOL・DOGEで1人1票の買い・売りの多数決に応じてGMOレバレッジを保有します。基本枠は70.8万円（60万円＋10/7入金分10.8万円）＋確定損益、維持率145%まで。票が消えれば決済します。</p></details>
-    <details><summary>Saxo ETF（清算中）</summary><p>ナスダック3倍ETF（TQQQ）と金ETF（GLDM）は清算中。米国市場時間に残りの保有を売却し、新規買いは停止しています。</p></details>
+    <details><summary>Saxo ETF・ナスダック3倍＋金（11/3再開）</summary><p>株CFD口座でTQQQを口座の半分（ナスダック100が200日線より上の間だけ）、商品CFD口座で金を全額保有。旧ETF口座のTQQQ・GLDMは9/28に清算済みで、今はCFD口座で同じ考え方の保有を再開しています。</p></details>
     <details><summary>Saxo 株・商品コピー（OKX上位トレーダー）</summary><p>OKX上位トレーダーの米国株・商品の建玉を5分ごとに集計。銘柄ごとに1人1票、買いを＋1・売りを−1として差し引き、純票数に応じて予算を配分します。分母は純票数の絶対値の合計と4の大きい方で、票が少ないと予算の一部だけを使います。SaxoのCFD（差金決済取引）で追随し、株と商品それぞれの市場時間に発注します。</p></details>
   </section>
   </div>
@@ -542,7 +542,7 @@ header>div{min-width:0} header .btn{padding:8px}
     drawCalendar();
     drawPnlChart();
     renderCrypto(f.lanes.gmo_crypto_trend || {});
-    renderSaxo(f.lanes.saxo_etf_trend || {});
+    renderSaxo(f.lanes.saxo_etf_trend || {}, f.lanes.saxo_copy || {});
     renderCopy(f.lanes.gmo_copy || {});
     renderSaxoCopy(f.lanes.saxo_copy || {});
     renderArb(f.lanes.gmo_basis_arb || {});
@@ -660,7 +660,7 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   let calMonth = null, calMode = "day", calSel = null, calLane = "all";
-  const CAL_LANES = [["all", "全体"], ["copy", "GMOコピー"], ["arb", "価格差"], ["trend", "トレンド他"], ["saxo", "Saxoコピー"], ["nikkei", "Saxo日経"], ["fx", "Saxo仲値"]];
+  const CAL_LANES = [["all", "全体"], ["copy", "GMOコピー"], ["arb", "価格差"], ["trend", "トレンド他"], ["saxo", "Saxo株・商品CFD"], ["nikkei", "Saxo日経"], ["fx", "Saxo仲値"]];
   const dayKey = (t) => new Date(t).toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
   function dailyPnl(f) {
     const hist = f.equity_history || [], flows = f.capital_changes?.events || [];
@@ -681,7 +681,7 @@ header>div{min-width:0} header .btn{padding:8px}
                  dep: dp.total, cum, partial: i === 0 };
       prev = cur;
     });
-    const src = { copy: "gmo_copy", arb: "gmo_basis_arb", gmo: "gmo_crypto_trend", saxo: "saxo_copy", nikkei: "saxo_nikkei_fade", fx: "saxo_usdjpy_fix" }, lastOf = {}, lp = {}, lc = {};
+    const src = { copy: "gmo_copy", arb: "gmo_basis_arb", gmo: "gmo_crypto_trend", saxo: "saxo_copy", saxoetf: "saxo_etf_trend", nikkei: "saxo_nikkei_fade", fx: "saxo_usdjpy_fix" }, lastOf = {}, lp = {}, lc = {};
     for (const [k, key] of Object.entries(src)) {
       lastOf[k] = new Map();
       (f.lane_pnl?.[key]?.points || []).filter((q) => Number.isFinite(q.pnl_jpy)).sort((a, b) => Date.parse(a.t) - Date.parse(b.t))
@@ -695,7 +695,7 @@ header>div{min-width:0} header .btn{padding:8px}
         dl[k] = v - lp[k]; lp[k] = v;
       }
       dl.trend = dl.gmo - dl.copy - dl.arb;
-      const l = { all: out[d].total, copy: dl.copy, arb: dl.arb, trend: dl.trend, saxo: dl.saxo, nikkei: dl.nikkei, fx: dl.fx }, c = {};
+      const l = { all: out[d].total, copy: dl.copy, arb: dl.arb, trend: dl.trend, saxo: dl.saxo + dl.saxoetf, nikkei: dl.nikkei, fx: dl.fx }, c = {};
       for (const k of Object.keys(l)) { lc[k] = (lc[k] || 0) + (l[k] || 0); c[k] = lc[k]; }
       out[d].lane = l; out[d].lcum = c;
     });
@@ -828,12 +828,12 @@ header>div{min-width:0} header .btn{padding:8px}
   const PNL_LANES = [
     ["total_all", "全体（GMO＋Saxo・入金除く）", "var(--text)"],
     ["gmo_copy", "GMOコピー", "var(--k-copy)"], ["gmo_basis_arb", "価格差", "var(--k-arb)"],
-    ["saxo_copy", "Saxoコピー（確定＋含み）", "var(--k-saxo)"], ["saxo_nikkei_fade", "Saxo日経（確定＋含み）", "var(--k-nikkei)"],
+    ["saxo_copy", "Saxoコピー（11/3停止まで）", "var(--k-saxo)"], ["saxo_etf_trend", "Saxo ETF再開（11/3〜）", "var(--accent)"], ["saxo_nikkei_fade", "Saxo日経（確定＋含み）", "var(--k-nikkei)"],
     ["saxo_usdjpy_fix", "Saxo仲値（確定＋含み）", "var(--k-fx)"],
     ["gmo_trend_only", "トレンド主体（推定）", "var(--k-trend)"], ["gmo_trend_measured", "トレンド実測（10/7〜）", "var(--k-trend2)"],
     ["gmo_crypto_trend", "GMO口座全体（トレンド含む）", "var(--k-gmo)"],
   ];
-  const PNL_DEFAULT = ["total_all", "gmo_copy", "gmo_basis_arb", "saxo_copy", "saxo_nikkei_fade", "saxo_usdjpy_fix", "gmo_trend_measured"];
+  const PNL_DEFAULT = ["total_all", "gmo_copy", "gmo_basis_arb", "saxo_copy", "saxo_etf_trend", "saxo_nikkei_fade", "saxo_usdjpy_fix", "gmo_trend_measured"];
   function pnlShown() {
     try {
       const v = JSON.parse(localStorage.getItem("pnlShown")), known = JSON.parse(localStorage.getItem("pnlKnown") || "null");
@@ -934,7 +934,8 @@ header>div{min-width:0} header .btn{padding:8px}
       <div class="note">▲両トレンド上向き ▶片方のみ ▼下向き（売却）</div>`;
   }
 
-  function renderSaxo(s) {
+  function renderSaxo(s, k) {
+    if (k && k.core_hold) return renderCoreHold(s, k);
     const h = s.holdings || {}, on = s.nasdaq_above_sma200;
     const stopped = s.liquidating || (s.holdings != null && !Object.values(h).some((v) => Number(v) !== 0));
     $("laneSaxo").innerHTML = `
@@ -948,6 +949,22 @@ header>div{min-width:0} header .btn{padding:8px}
       </div>
       <div class="note">${stopped ? "この金額はETF口座の残高で、ナスダックの運用益ではありません。新規買いは停止中。コピー売買は下の別口座に表示します。" : "200日線を下回るとTQQQを売却して現金化。発注は米国市場時間のみ。"}</div>
       ${shadowHold(s.shadow_hold)}`;
+  }
+
+  // Owner 2026-11-04: the CFD sleeve's TQQQ + gold hold (since 11/3 12:00 JST) is the Saxo ETF lane resumed.
+  function renderCoreHold(s, k) {
+    const on = s.nasdaq_above_sma200, label = (sym) => /^TQQQ/.test(sym) ? "TQQQ（ナスダック3倍）" : /^(GOLD|XAU)/.test(sym) ? "金" : sym;
+    const pts = (feed?.lane_pnl?.saxo_etf_trend?.points || []).filter((q) => Number.isFinite(q.pnl_jpy)),
+      pnl = pts.length ? pts[pts.length - 1].pnl_jpy : null;
+    const rows = (k.positions || []).map((p) => `<div class="k">${esc(label(p.symbol || "UIC_" + p.uic))}</div>
+      <div class="v">${number(p.amount)} <span class="${cls(p.unrealized_pnl_jpy)}" style="font-size:11px">含み ${signed(p.unrealized_pnl_jpy)}</span></div>`).join("");
+    $("laneSaxo").innerHTML = `
+      <div class="lane-head"><div class="t">Saxo ETF・ナスダック3倍＋金（再開）</div><div class="v ${cls(pnl)}">${signed(pnl)}</div></div>
+      <div class="chips"><span class="pill ok">11/3再開・CFD口座で保有</span>
+        <span class="chip">ナスダック 200日線 ${on === true ? '<span class="pos">上 ▲</span>' : on === false ? '<span class="neg">下 ▼</span>' : "—"}</span></div>
+      <div class="kv">${rows || '<div class="k">保有</div><div class="v muted">なし</div>'}
+        <div class="k">目標配分</div><div class="v">TQQQ 株口座の半分（200日線より上の間のみ）／金 商品口座の全額</div></div>
+      <div class="note">右上の金額は11/3 12:00の切り替え時点からの損益（株・商品CFD口座の決済＋含み損益）。ナスダックが200日線を下回るとTQQQを売却し、金だけ残します。発注は米国市場時間のみ。旧ETF口座は使っていません。</div>`;
   }
 
   function shadowHold(w) {
@@ -1006,6 +1023,7 @@ header>div{min-width:0} header .btn{padding:8px}
   };
   const blockerText = (b) => BLOCKERS[String(b).split(":")[0]] || "取引条件を確認してください";
   function renderSaxoCopy(k) {
+    if (k.core_hold) return renderCopyStopped(k);
     const orig = k;
     if (k.auth_expired && k.last_known) { const l = k.last_known; k = { ...k, votes: l.votes, targets_jpy: l.targets_jpy, positions: l.positions, margin_utilization_pct: l.margin_utilization_pct }; }
     const votes = k.votes || {}, targets = k.targets_jpy || {}, symbols = k.symbols || {};
@@ -1041,6 +1059,18 @@ header>div{min-width:0} header .btn{padding:8px}
       ${table ? `<div aria-label="Saxoコピーの投票と保有">${table}</div>` : '<div class="empty">投票・保有データなし</div>'}
       <div class="note">1人1票の純票数で米国株・商品CFDへ配分。5分ごとに更新。票の＋は買い優勢、−は売り優勢。累計損益は口座残高の増減（決済済みの損益を含む）、含み損益は今の保有分だけです。</div>
       ${(k.blockers || []).length ? `<div class="note warn">${k.blockers.map((b) => esc(blockerText(b))).join(" / ")}</div>` : ""}`;
+  }
+
+  function renderCopyStopped(k) {
+    const pts = (feed?.lane_pnl?.saxo_copy?.points || []).filter((q) => Number.isFinite(q.pnl_jpy)),
+      total = pts.length ? pts[pts.length - 1].pnl_jpy : null, p = k.copy_paper;
+    const paper = p ? `<div class="k">紙上：コピー通り（${esc(p.since)}〜、${number(p.days)}日）</div><div class="v ${cls(p.follow_net_jpy)}">${signed(p.follow_net_jpy)}</div>
+      <div class="k">紙上：逆張り（同期間）</div><div class="v ${cls(p.inverse_net_jpy)}">${signed(p.inverse_net_jpy)}</div>`
+      : '<div class="k">紙上の記録</div><div class="v muted">初回記録待ち（毎朝9:20）</div>';
+    $("laneSaxoCopy").innerHTML = `<div class="lane-head"><div class="t">Saxo 株・商品コピー（停止・記録のみ）</div></div>
+      <div class="chips"><span class="pill warn">11/3 12:00から売買停止</span></div>
+      <div class="kv"><div class="k">停止までの累計損益（決済＋含み）</div><div class="v ${cls(total)}">${signed(total)}</div>${paper}</div>
+      <div class="note">OKX上位トレーダーの票での売買は止め、資金はナスダック3倍＋金の保有（上のSaxo ETF）へ回しています。票と、その通り／逆に売買した場合の損益は紙上で毎日記録しています（Saxoの実約定ではなく公開価格と費用モデルによる推定）。</div>`;
   }
 
   const VERDICT = { ADOPT: ["ok", "採用"], COLLECT: ["warn", "収集"], WATCH: ["warn", "観察"], REJECT: ["bad", "棄却"] };
