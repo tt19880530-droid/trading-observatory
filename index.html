@@ -1208,15 +1208,20 @@ header>div{min-width:0} header .btn{padding:8px}
     const q = n.quotes || {};
     const quotes = ["US500", "EU50", "USNAS100"].filter((k) => q[k]).map((k) => `${k} ${number(q[k].bid)}（${q[k].spread_bp}bp）`).join(" / ");
     const rows = (n.recent || []).slice().reverse().map((e) => `<div class="hrow"><div>${e.op === "CLOSE" ? "決済" : "新規"} ${esc(e.symbol || "")} ${e.side === "Buy" ? "買" : "売"} ${number(e.amount)}<div class="sub muted" style="font-size:11px">${jst(e.at)} ・ ${esc(RULE[e.rule] || e.rule || "")}</div></div><span class="${cls(e.pnl_estimate_jpy)}">${e.pnl_estimate_jpy != null ? signed(e.pnl_estimate_jpy) : ""}</span></div>`).join("");
+    const prow = (n.paper_recent || []).slice().reverse().map((e) => `<div class="hrow"><div>${esc(RULE[e.rule] || e.rule)} ${e.side === "Buy" ? "買" : "売"}<div class="sub muted" style="font-size:11px">${jst(e.entry_at)}→${jst(e.exit_at)} ・ ${e.bp}bp</div></div><span class="${cls(e.pnl_jpy_1unit)}">${signed(e.pnl_jpy_1unit)}</span></div>`).join("");
+    const popen = Object.entries(n.paper_open || {}).map(([k, o]) => `${RULE[k] || k} ${o.side === "Buy" ? "買" : "売"} ${number(o.entry)}`).join(" / ");
     const blockers = (n.blockers || []).filter((b) => !/PAPER_ONLY/.test(b));
     $("laneIndex").innerHTML = `<div class="lane-head"><div class="t">Saxo 夜の指数テスト（最小単位）</div><div><span class="pill ${st[0]}">${st[1]}</span></div></div>
       <div class="kv"><div class="k">今日の信号</div><div class="v">${sig ? esc(sig) : '<span class="muted">なし</span>'}</div>
-      <div class="k">含み損益</div><div class="v ${cls(n.unrealized_pnl_jpy)}">${signed(n.unrealized_pnl_jpy)}</div>
-      <div class="k">確定損益（${n.closes || 0}回）</div><div class="v ${cls(n.realized_pnl_jpy)}">${signed(n.realized_pnl_jpy)}</div>
+      <div class="k">紙上の保有</div><div class="v">${popen ? esc(popen) : '<span class="muted">なし</span>'}</div>
+      <div class="k">紙上の累計（1単位・${n.paper_closes || 0}回）</div><div class="v ${cls(n.paper_cum_jpy)}">${signed(n.paper_cum_jpy)}</div>
+      <div class="k">実弾の含み損益</div><div class="v ${cls(n.unrealized_pnl_jpy)}">${signed(n.unrealized_pnl_jpy)}</div>
+      <div class="k">実弾の確定（${n.closes || 0}回）</div><div class="v ${cls(n.realized_pnl_jpy)}">${signed(n.realized_pnl_jpy)}</div>
       <div class="k">累計（確定＋含み）</div><div class="v ${cls(n.lane_pnl_jpy)}">${signed(n.lane_pnl_jpy)}</div>
       <div class="k">価格</div><div class="v" style="font-size:12px">${quotes || "—"}</div></div>
-      ${rows ? `<div aria-label="夜指数の直近の注文">${rows}</div>` : '<div class="empty">まだ注文はありません</div>'}
-      <div class="note">11/4から。米国500：寄り付きのギャップが±0.43%以上かつ前日VIX15.7以上なら逆張り、NY16:00に決済（23:30〜）。欧州50：米国500の最初の30分が±0.15%超ならその方向に建て、ドイツの引け（1:30ごろ）に決済。ナスダックは1単位約470万円のため紙上のみ。各1単位（約120〜130万円）、累計−1.5万円で停止、30回以上で黒字かつスプレッドが小さければ自動で単位を増やします。更新 ${jst(n.updated_at)}</div>
+      ${prow ? `<div aria-label="夜指数の紙上記録">${prow}</div>` : '<div class="empty">紙上の決済記録はまだありません</div>'}
+      ${rows ? `<div aria-label="夜指数の直近の注文">${rows}</div>` : ""}
+      <div class="note">11/4から。米国500：寄り付きのギャップが±0.43%以上かつ前日VIX15.7以上なら逆張り、NY16:00に決済（23:30〜）。欧州50：米国500の最初の30分が±0.15%超ならその方向に建て、ドイツの引け（1:30ごろ）に決済。11/5から全ルール紙上記録のみ（1単位の証拠金が株CFD口座の夜の空きを超えるため。11/5 0:00の欧州50は証拠金不足で見送り）。紙上は1単位、買いは売値・売りは買値で約定と仮定。更新 ${jst(n.updated_at)}</div>
       ${blockers.length ? `<div class="note warn">${blockers.map(esc).join(" / ")}</div>` : ""}`;
   }
 
