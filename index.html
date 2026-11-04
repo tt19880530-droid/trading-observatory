@@ -88,6 +88,10 @@ h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
 .rules{display:grid;gap:2px}
 details{border-bottom:1px solid var(--line);padding:10px 0}
 details:last-child{border-bottom:0}
+table.topn{width:100%;border-collapse:collapse;font-size:11px;font-family:var(--mono);font-variant-numeric:tabular-nums}
+table.topn th{position:sticky;top:0;background:var(--panel);color:var(--muted);font-weight:600;text-align:right;padding:4px 2px;font-family:inherit}
+table.topn td{text-align:right;padding:3px 2px;border-top:1px solid var(--line);white-space:nowrap}
+table.topn th:first-child,table.topn td:first-child{text-align:left}
 summary{cursor:pointer;font-weight:700;font-size:14px}
 details p{margin:8px 0 2px;color:var(--muted);font-size:13px;max-width:65ch}
 dialog{border:1px solid var(--line);border-radius:18px;background:var(--panel);color:var(--text);padding:18px;width:min(460px,92vw)}
@@ -1006,7 +1010,27 @@ header>div{min-width:0} header .btn{padding:8px}
       <div class="lane-head"><div class="t">GMO コピー（OKX・Binance上位トレーダー）</div><div class="v ${cls(pnl + (k.unrealized_pnl_jpy ?? 0))}" style="font-size:15px">${signed(pnl + (k.unrealized_pnl_jpy ?? 0))}</div></div>
       <div class="kv"><div class="k">損益の内訳（確定＋含み、確定は売買手数料${yen(k.trading_fee_jpy || 0)}とレバレッジ手数料の推定${yen(k.leverage_fee_est_jpy || 0)}を控除後）</div><div class="v">${signed(pnl)} ＋ ${Number.isFinite(k.unrealized_pnl_jpy) ? signed(k.unrealized_pnl_jpy) : "含み 計測前"}</div>
       <div class="k">使える枠（上限 ${yen(k.cap_jpy)}＝GMO口座の評価額×1.13で、利益・損失・入金で伸び縮み。トレンド休止中は証拠金の余力全体、10/31から目標は一律1.5倍）</div><div class="v">${yen(k.budget_jpy)}</div>${rows}</div>
-      <div class="note">OKXの上位トレーダーに加え、10/20からBinanceの上位トレーダーの新規建玉も5分ごとに集計し（Binanceの収集が止まったときはOKXのみ）、銘柄ごとに1人1票の多数決の向きでGMOレバレッジを保有。票が消えれば決済。損益は確定分（約定ベース）に、保有中ポジションの含み損益（取引所の評価値）を加えた合計。${(k.blockers || []).length ? " 制限: " + esc(k.blockers.join(" / ")) : ""}</div>${renderVariants()}`;
+      <div class="note">OKXの上位トレーダーに加え、10/20からBinanceの上位トレーダーの新規建玉も5分ごとに集計し（Binanceの収集が止まったときはOKXのみ）、銘柄ごとに1人1票の多数決の向きでGMOレバレッジを保有。票が消えれば決済。損益は確定分（約定ベース）に、保有中ポジションの含み損益（取引所の評価値）を加えた合計。${(k.blockers || []).length ? " 制限: " + esc(k.blockers.join(" / ")) : ""}</div>${renderVariants()}${renderTopn(feed?.copy_topn)}`;
+  }
+
+  // Owner 2026-11-04: all leaders (live) vs top-10 OKX leaders, paper, daily; switch decision D17 (11/09, 11/23).
+  function renderTopn(t) {
+    const days = (t?.days || []).filter((d) => Number.isFinite(d.all) && Number.isFinite(d.top10));
+    if (!days.length) return "";
+    let ca = 0, ct = 0, wins = 0;
+    const cum = days.map((d) => { ca += d.all; ct += d.top10; if (d.top10 > d.all) wins++; return { ...d, ca, ct }; });
+    const W = 300, H = 90, vals = cum.flatMap((d) => [d.ca, d.ct, 0]), lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
+    const X = (i) => (cum.length > 1 ? i / (cum.length - 1) : 0) * W, Y = (v) => (4 + (hi - v) / span * (H - 8)).toFixed(1);
+    const line = (key, color) => `<polyline points="${cum.map((d, i) => `${X(i).toFixed(1)},${Y(d[key])}`).join(" ")}" fill="none" stroke="${color}" stroke-width="2"/>`;
+    const rows = cum.slice().reverse().map((d) => `<tr><td>${esc(d.day.slice(5).replace("-", "/"))}${d.complete ? "" : "<span class=\"muted\">*</span>"}</td>
+      <td class="${cls(d.all)}">${signed(d.all)}</td><td class="${cls(d.top10)}">${signed(d.top10)}</td><td class="${cls(d.top10 - d.all)}">${signed(d.top10 - d.all)}</td>
+      <td class="${cls(d.ca)}">${signed(d.ca)}</td><td class="${cls(d.ct)}">${signed(d.ct)}</td></tr>`).join("");
+    return `<details style="margin-top:10px"><summary>上位10人と全員の比較（紙上） 累計 全員 <span class="${cls(ca)}">${signed(ca)}</span> ／ 上位10人 <span class="${cls(ct)}">${signed(ct)}</span></summary>
+      <svg viewBox="0 0 ${W} ${H}" width="100%" height="90" role="img" aria-label="累計損益の推移：全員と上位10人" style="margin-top:8px">
+        <line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line)" stroke-dasharray="3 3"/>${line("ca", "var(--k-copy)")}${line("ct", "var(--accent)")}</svg>
+      <div class="legend"><span><i style="background:var(--k-copy)"></i>全員（今の方式）</span><span><i style="background:var(--accent)"></i>上位10人</span></div>
+      <div style="max-height:320px;overflow:auto;margin-top:6px"><table class="topn"><thead><tr><th>日</th><th>全員</th><th>上位10人</th><th>差</th><th>累計全員</th><th>累計上位</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="note">${days.length}日中、上位10人が勝った日 ${wins}日。費用0.02%込みの紙上計算（本番より小さい予算）で、日付はUTC（日本時間9:00区切り）、*は集計途中の日。切り替えは11/9中間・11/23最終で、両方の記録で累計+3,000円以上かつ直近14日も上回る場合だけ（判断D17）。</div></details>`;
   }
 
   const number = (v) => Number.isFinite(v) ? v.toLocaleString("ja-JP", { maximumFractionDigits: 4 }) : "—";
