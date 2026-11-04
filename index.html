@@ -1015,6 +1015,15 @@ header>div{min-width:0} header .btn{padding:8px}
       <div class="note">${top ? "11/4から、OKXのリーダーのうち直近の成績が良い上位10人（毎日9:00に選び直し）の建玉だけを5分ごとに集計し、" : "OKXの上位トレーダーに加え、10/20からBinanceの上位トレーダーの新規建玉も5分ごとに集計し（Binanceの収集が止まったときはOKXのみ）、"}銘柄ごとに1人1票の多数決の向きでGMOレバレッジを保有。票が消えれば決済。損益は確定分（約定ベース）に、保有中ポジションの含み損益（取引所の評価値）を加えた合計。${(k.blockers || []).length ? " 制限: " + esc(k.blockers.join(" / ")) : ""}</div>${renderVariants()}${renderTopn(feed?.copy_topn)}`;
   }
 
+  // Owner 2026-11-04: top-10 rule with a 1 h (live) / 2 h / 3 h vote-confirmation wait, paper; decision D18 (11/23).
+  function renderWaits(w) {
+    const names = ["1h", "2h", "3h"].filter((k) => w && w[k]);
+    if (!names.length) return "";
+    return `<div style="margin-top:10px;font-weight:700;font-size:13px">票の向きが変わってから待つ時間（上位10人・紙上）</div>
+      <table class="topn" style="margin-top:4px"><thead><tr><th>待ち時間</th><th>10/11〜</th><th>最大の下落</th><th>11/4〜</th></tr></thead><tbody>${names.map((k) =>
+        `<tr><td>${k === "1h" ? "1時間（今）" : k.replace("h", "時間")}</td><td class="${cls(w[k].pnl_jpy)}">${signed(w[k].pnl_jpy)}</td><td>${signed(-w[k].max_dd_jpy)}</td><td class="${cls(w[k].since_switch_jpy)}">${signed(w[k].since_switch_jpy)}</td></tr>`).join("")}</tbody></table>`;
+  }
+
   // Owner 2026-11-04: all leaders (live) vs top-10 OKX leaders, paper, daily; switch decision D17 (11/09, 11/23).
   function renderTopn(t) {
     const days = (t?.days || []).filter((d) => Number.isFinite(d.all) && Number.isFinite(d.top10));
@@ -1032,7 +1041,8 @@ header>div{min-width:0} header .btn{padding:8px}
         <line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line)" stroke-dasharray="3 3"/>${line("ca", "var(--k-copy)")}${line("ct", "var(--accent)")}</svg>
       <div class="legend"><span><i style="background:var(--k-copy)"></i>全員（今の方式）</span><span><i style="background:var(--accent)"></i>上位10人</span></div>
       <div style="max-height:320px;overflow:auto;margin-top:6px"><table class="topn"><thead><tr><th>日</th><th>全員</th><th>上位10人</th><th>差</th><th>累計全員</th><th>累計上位</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <div class="note">${days.length}日中、上位10人が勝った日 ${wins}日。費用0.02%込みの紙上計算（本番より小さい予算）で、日付はUTC（日本時間9:00区切り）、*は集計途中の日。11/4 18:15から本番は上位10人で運用中。11/23の判定で、切り替え後の期間に全員の方式のほうが良ければ元に戻す（判断D17）。</div></details>`;
+      ${renderWaits(t.confirm_waits)}
+      <div class="note">${days.length}日中、上位10人が勝った日 ${wins}日。費用0.02%込みの紙上計算（本番より小さい予算）で、日付はUTC（日本時間9:00区切り）、*は集計途中の日。11/4 18:15から本番は上位10人で運用中。11/23の判定で、切り替え後の期間に全員の方式のほうが良ければ元に戻す（判断D17）。待ち時間も同じ日に、2時間が1時間を切り替え後と全期間の両方で上回り、最大の下落が1.5倍以内なら変更（判断D18）。</div></details>`;
   }
 
   const number = (v) => Number.isFinite(v) ? v.toLocaleString("ja-JP", { maximumFractionDigits: 4 }) : "—";
