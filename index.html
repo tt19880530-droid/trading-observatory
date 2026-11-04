@@ -613,6 +613,7 @@ header>div{min-width:0} header .btn{padding:8px}
       <div class="k">目標</div><div class="v">${yen(fp.target_jpy)}（${esc(fp.end)}まで）</div>
       <div class="k">今の評価額</div><div class="v">${yen(fp.current_equity_jpy)}（目標の${pct(fp.progress)}）</div>
       <div class="k">計画上の今の目安</div><div class="v">${yen(fp.planned_now_jpy)} <span class="${cls(gap)}">${signed(gap)}</span></div>
+      <div class="k">計画との差（日数）</div><div class="v ${cls(fp.ahead_days)}">${fp.ahead_days == null ? "—" : Math.abs(fp.ahead_days) < 0.5 ? "計画どおり" : (fp.ahead_days > 0 ? "+" : "−") + Math.round(Math.abs(fp.ahead_days)) + "日" + (fp.ahead_days > 0 ? " 先行" : " 遅れ")}<div class="muted" style="font-size:11px">差額が必要利回りで何日分か（入金も含めた評価額で比較）</div></div>
       <div class="k">開始からの入金（確認済み）</div><div class="v">${yen(fp.deposits_jpy)} <span class="muted">計画では${yen(fp.planned_deposits_jpy)}</span></div>
       <div class="k">開始からの運用損益</div><div class="v ${cls(fp.gain_jpy)}">${signed(fp.gain_jpy)}（${pct(fp.gain_pct_of_invested)}）</div>
       <div class="k">必要な利回り（税引き後）</div><div class="v">年${pct(fp.required_rate)} ／ 月${(rm * 100).toFixed(2)}% ／ 日${(rd * 100).toFixed(3)}%<div class="muted" style="font-size:11px">今から: 年${pct(fp.required_rate_from_now)}</div></div>
