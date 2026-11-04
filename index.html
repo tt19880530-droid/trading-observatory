@@ -319,7 +319,7 @@ header>div{min-width:0} header .btn{padding:8px}
     <details><summary>GMO 暗号資産トレンド</summary><p>BTC・ETH・XRP の現物を口座の30%まで保有（10/7に55%から縮小、証拠金をコピーへ回すため）（2026/9/26にLTC・BCHを外し主要3銘柄に集中）。4時間足で「14日前より高いか」「30日前より高いか」を30分ごとに判定し、両方上なら満額、片方なら半分、両方下なら売却。レバレッジ上乗せは10/6に停止（効果が小さく、コピーと向きが逆になる場面があるため）。</p></details>
     <details><summary>急騰追随</summary><p>BTC・ETH・XRPで、確定した1時間足の上昇が過去30日の標準偏差の2.5倍を超えたら、口座の15%をレバレッジで買い、12時間後に決済。</p></details>
     <details><summary>現物⇄レバレッジ 価格差</summary><p>GMOの現物とレバレッジの価格差を監視。成行側の新規建玉基準は30bp以上（0.30%）。安い方を買い、高い方を売り、差が縮んだら決済します。指値で待つ新規建玉（maker）は停止中です。</p></details>
-    <details><summary>GMO コピー（OKX・Binance上位トレーダー）</summary><p>OKX上位トレーダーの建玉を5分ごとに集計。BTC・ETH・XRP・SOL・DOGEで1人1票の買い・売りの多数決に応じてGMOレバレッジを保有します。基本枠は70.8万円（60万円＋10/7入金分10.8万円）＋確定損益、維持率145%まで。票が消えれば決済します。</p></details>
+    <details><summary>GMO コピー（OKX上位10人）</summary><p>OKXのリーダーのうち、直近の成績が良い上位10人（決済15回以上・活動3日以上・含み損を抱え続けていない人から毎日9:00に選び直し、11/4から）の建玉を5分ごとに集計。BTC・ETH・XRP・SOL・DOGEで1人1票の買い・売りの多数決に応じてGMOレバレッジを保有します。選び直しが2日以上止まると全員の票に戻ります。基本枠は70.8万円（60万円＋10/7入金分10.8万円）＋確定損益、維持率145%まで。票が消えれば決済します。</p></details>
     <details><summary>Saxo ETF・ナスダック3倍＋金（11/3再開）</summary><p>株CFD口座でTQQQを口座の半分（ナスダック100が200日線より上の間だけ）、商品CFD口座で金を全額保有。旧ETF口座のTQQQ・GLDMは9/28に清算済みで、今はCFD口座で同じ考え方の保有を再開しています。</p></details>
     <details><summary>Saxo 株・商品コピー（OKX上位トレーダー）</summary><p>OKX上位トレーダーの米国株・商品の建玉を5分ごとに集計。銘柄ごとに1人1票、買いを＋1・売りを−1として差し引き、純票数に応じて予算を配分します。分母は純票数の絶対値の合計と4の大きい方で、票が少ないと予算の一部だけを使います。SaxoのCFD（差金決済取引）で追随し、株と商品それぞれの市場時間に発注します。</p></details>
   </section>
@@ -1006,11 +1006,13 @@ header>div{min-width:0} header .btn{padding:8px}
     }).join("");
     const closes = (feed.events || []).filter((e) => e.lane === "gmo_copy" && e.leg === "CLOSE" && e.accepted);
     const fee = (k.leverage_fee_est_jpy || 0) + (k.trading_fee_jpy || 0), pnl = (k.realized_pnl_jpy ?? closes.reduce((t, e) => t + (e.realized_pnl_jpy || 0), 0)) - fee;
+    const lf = k.leader_filter || {}, top = lf.mode && lf.mode !== "all";
     $("laneCopy").innerHTML = `
-      <div class="lane-head"><div class="t">GMO コピー（OKX・Binance上位トレーダー）</div><div class="v ${cls(pnl + (k.unrealized_pnl_jpy ?? 0))}" style="font-size:15px">${signed(pnl + (k.unrealized_pnl_jpy ?? 0))}</div></div>
+      <div class="lane-head"><div class="t">GMO コピー（${top ? "OKX上位" + (lf.leaders || 10) + "人" : "OKX・Binance上位トレーダー"}）</div><div class="v ${cls(pnl + (k.unrealized_pnl_jpy ?? 0))}" style="font-size:15px">${signed(pnl + (k.unrealized_pnl_jpy ?? 0))}</div></div>
       <div class="kv"><div class="k">損益の内訳（確定＋含み、確定は売買手数料${yen(k.trading_fee_jpy || 0)}とレバレッジ手数料の推定${yen(k.leverage_fee_est_jpy || 0)}を控除後）</div><div class="v">${signed(pnl)} ＋ ${Number.isFinite(k.unrealized_pnl_jpy) ? signed(k.unrealized_pnl_jpy) : "含み 計測前"}</div>
-      <div class="k">使える枠（上限 ${yen(k.cap_jpy)}＝GMO口座の評価額×1.13で、利益・損失・入金で伸び縮み。トレンド休止中は証拠金の余力全体、10/31から目標は一律1.5倍）</div><div class="v">${yen(k.budget_jpy)}</div>${rows}</div>
-      <div class="note">OKXの上位トレーダーに加え、10/20からBinanceの上位トレーダーの新規建玉も5分ごとに集計し（Binanceの収集が止まったときはOKXのみ）、銘柄ごとに1人1票の多数決の向きでGMOレバレッジを保有。票が消えれば決済。損益は確定分（約定ベース）に、保有中ポジションの含み損益（取引所の評価値）を加えた合計。${(k.blockers || []).length ? " 制限: " + esc(k.blockers.join(" / ")) : ""}</div>${renderVariants()}${renderTopn(feed?.copy_topn)}`;
+      <div class="k">使える枠（上限 ${yen(k.cap_jpy)}＝GMO口座の評価額×1.13で、利益・損失・入金で伸び縮み。トレンド休止中は証拠金の余力全体、10/31から目標は一律1.5倍）</div><div class="v">${yen(k.budget_jpy)}</div>
+      <div class="k">票を数える人</div><div class="v">${top ? `成績上位${lf.leaders || 10}人（${lf.selection_cutoff ? esc(jst(lf.selection_cutoff)) + "選出" : "毎日9:00選出"}）` : "全員"}</div>${rows}</div>
+      <div class="note">${top ? "11/4から、OKXのリーダーのうち直近の成績が良い上位10人（毎日9:00に選び直し）の建玉だけを5分ごとに集計し、" : "OKXの上位トレーダーに加え、10/20からBinanceの上位トレーダーの新規建玉も5分ごとに集計し（Binanceの収集が止まったときはOKXのみ）、"}銘柄ごとに1人1票の多数決の向きでGMOレバレッジを保有。票が消えれば決済。損益は確定分（約定ベース）に、保有中ポジションの含み損益（取引所の評価値）を加えた合計。${(k.blockers || []).length ? " 制限: " + esc(k.blockers.join(" / ")) : ""}</div>${renderVariants()}${renderTopn(feed?.copy_topn)}`;
   }
 
   // Owner 2026-11-04: all leaders (live) vs top-10 OKX leaders, paper, daily; switch decision D17 (11/09, 11/23).
@@ -1030,7 +1032,7 @@ header>div{min-width:0} header .btn{padding:8px}
         <line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line)" stroke-dasharray="3 3"/>${line("ca", "var(--k-copy)")}${line("ct", "var(--accent)")}</svg>
       <div class="legend"><span><i style="background:var(--k-copy)"></i>全員（今の方式）</span><span><i style="background:var(--accent)"></i>上位10人</span></div>
       <div style="max-height:320px;overflow:auto;margin-top:6px"><table class="topn"><thead><tr><th>日</th><th>全員</th><th>上位10人</th><th>差</th><th>累計全員</th><th>累計上位</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <div class="note">${days.length}日中、上位10人が勝った日 ${wins}日。費用0.02%込みの紙上計算（本番より小さい予算）で、日付はUTC（日本時間9:00区切り）、*は集計途中の日。切り替えは11/9中間・11/23最終で、両方の記録で累計+3,000円以上かつ直近14日も上回る場合だけ（判断D17）。</div></details>`;
+      <div class="note">${days.length}日中、上位10人が勝った日 ${wins}日。費用0.02%込みの紙上計算（本番より小さい予算）で、日付はUTC（日本時間9:00区切り）、*は集計途中の日。11/4 18:15から本番は上位10人で運用中。11/23の判定で、切り替え後の期間に全員の方式のほうが良ければ元に戻す（判断D17）。</div></details>`;
   }
 
   const number = (v) => Number.isFinite(v) ? v.toLocaleString("ja-JP", { maximumFractionDigits: 4 }) : "—";
