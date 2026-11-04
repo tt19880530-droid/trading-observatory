@@ -1021,11 +1021,11 @@ header>div{min-width:0} header .btn{padding:8px}
 
   // Owner 2026-11-04: top-10 rule with a 1 h (live) / 2 h / 3 h vote-confirmation wait, paper; decision D18 (11/23).
   function renderWaits(w) {
-    const names = ["1h", "2h", "3h"].filter((k) => w && w[k]);
+    const names = ["1h", "2h", "3h", "1h_shock_top2"].filter((k) => w && w[k]);
     if (!names.length) return "";
     return `<div style="margin-top:10px;font-weight:700;font-size:13px">票の向きが変わってから待つ時間（上位10人・紙上）</div>
       <table class="topn" style="margin-top:4px"><thead><tr><th>待ち時間</th><th>10/11〜</th><th>最大の下落</th><th>11/4〜</th></tr></thead><tbody>${names.map((k) =>
-        `<tr><td>${k === "1h" ? "1時間（今）" : k.replace("h", "時間")}</td><td class="${cls(w[k].pnl_jpy)}">${signed(w[k].pnl_jpy)}</td><td>${signed(-w[k].max_dd_jpy)}</td><td class="${cls(w[k].since_switch_jpy)}">${signed(w[k].since_switch_jpy)}</td></tr>`).join("")}</tbody></table>`;
+        `<tr><td>${k === "1h" ? "1時間（今）" : k === "1h_shock_top2" ? "1時間・急変時は上位2人だけ" : k.replace("h", "時間")}</td><td class="${cls(w[k].pnl_jpy)}">${signed(w[k].pnl_jpy)}</td><td>${signed(-w[k].max_dd_jpy)}</td><td class="${cls(w[k].since_switch_jpy)}">${signed(w[k].since_switch_jpy)}</td></tr>`).join("")}</tbody></table>`;
   }
 
   // Owner 2026-11-04: all leaders (live) vs top-10 OKX leaders, paper, daily; switch decision D17 (11/09, 11/23).
