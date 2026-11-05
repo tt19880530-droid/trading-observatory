@@ -213,6 +213,7 @@ header>div{min-width:0} header .btn{padding:8px}
   </div>
   <div class="grid two">
     <section class="card" id="laneNikkei"></section>
+    <section class="card" id="laneBreakout"></section>
     <section class="card" id="laneIndex"></section>
     <section class="card" id="laneArb"></section>
   </div>
@@ -553,6 +554,7 @@ header>div{min-width:0} header .btn{padding:8px}
     renderArb(f.lanes.gmo_basis_arb || {});
     renderNikkei(f.lanes.saxo_nikkei_fade || {});
     renderIndex(f.lanes.saxo_index_canary || {});
+    renderBreakout(f.lanes.saxo_usdjpy_breakout || {});
     renderEfficiency(f.capital_efficiency || {});
     window.__codexTasks = f.codex_tasks || [];
     renderCodex(f.codex_tasks || []);
@@ -1198,6 +1200,31 @@ header>div{min-width:0} header .btn{padding:8px}
       <div class="k">取り分けた証拠金</div><div class="v">${yen(n.reserve_jpy)}</div></div>
       ${rows ? `<div aria-label="日経枠の直近の注文">${rows}</div>` : '<div class="empty">まだ注文はありません</div>'}
       <div class="note">前夜の米国株が上げたら9:00に日経225先物CFDを売り、下げたら買う。15:00に決済、持ち越しなし。10/29から8単位（10/27〜28は5単位、10/26は1単位）、累計−4万円で自動停止。60営業日で判定。更新 ${jst(n.updated_at)}</div>
+      ${blockers.length ? `<div class="note warn">${blockers.map(esc).join(" / ")}</div>` : ""}`;
+  }
+
+  function renderBreakout(n) {
+    const zone = n.intervention_zone_level || 160;
+    const st = !n.status ? ["warn", "データなし"] : n.status === "IDLE" || n.status === "OK" || n.status === "BLOCKED" ? ["ok", n.execute ? "実弾で稼働中" : "紙上のみ"] : ["bad", "停止条件あり"];
+    const q = n.quote || {}, p = n.position, sig = n.signal || {};
+    const zonePill = n.intervention_zone ? `<span class="pill bad">介入警戒 ${zone}円以上：買い見送り・売りは利確なしで待機</span>` : `<span class="pill ok">${zone}円未満：通常ルール</span>`;
+    const SIDE = (s) => s === "Buy" ? "買" : "売";
+    const pos = p ? `${SIDE(p.side)} ${number(p.amount)}ドル @${p.entry} ／ 損切り ${p.stop} ／ 利確 ${p.tp == null ? "なし（介入待ち）" : p.tp}` : "";
+    const rng = sig.high ? `${sig.low}〜${sig.high}（${sig.width_pips ?? ((sig.high - sig.low) * 100).toFixed(1)} pips）` : "";
+    const rows = (n.recent || []).slice().reverse().map((e) => `<div class="hrow"><div>${e.op === "CLOSE" ? "決済" : "新規"} ${SIDE(e.side)} ${number(e.amount)}<div class="sub muted" style="font-size:11px">${jst(e.at)}${e.reason ? " ・ " + esc(e.reason) : ""}</div></div><span class="${cls(e.pnl_estimate_jpy)}">${e.pnl_estimate_jpy != null ? signed(e.pnl_estimate_jpy) : ""}</span></div>`).join("");
+    const prow = (n.paper_recent || []).slice().reverse().map((e) => `<div class="hrow"><div>${SIDE(e.side)} ${e.entry}→${e.exit}<div class="sub muted" style="font-size:11px">${jst(e.opened_at)} ・ ${esc(e.reason || "")} ・ ${e.pips}pips</div></div><span class="${cls(e.pnl_jpy)}">${signed(e.pnl_jpy)}</span></div>`).join("");
+    const blockers = (n.blockers || []).filter((b) => b !== "OUTSIDE_TRADING_WINDOW");
+    $("laneBreakout").innerHTML = `<div class="lane-head"><div class="t">Saxo ドル円 東京レンジ・ブレイクアウト</div><div><span class="pill ${st[0]}">${st[1]}</span></div></div>
+      <div style="margin:6px 0">${zonePill}</div>
+      <div class="kv"><div class="k">ドル円</div><div class="v">${q.bid ? `${q.bid} / ${q.ask}` : "—"}</div>
+      <div class="k">今日の東京レンジ</div><div class="v">${rng ? esc(rng) : '<span class="muted">16:00から判定</span>'}</div>
+      <div class="k">保有</div><div class="v">${pos ? esc(pos) : '<span class="muted">なし</span>'}</div>
+      <div class="k">含み損益</div><div class="v ${cls(n.unrealized_pnl_jpy)}">${signed(n.unrealized_pnl_jpy)}</div>
+      <div class="k">確定（${n.closes || 0}回）</div><div class="v ${cls(n.realized_pnl_jpy)}">${signed(n.realized_pnl_jpy)}</div>
+      <div class="k">紙上の累計（5,000ドル・${n.paper_closes || 0}回）</div><div class="v ${cls(n.paper_cum_jpy)}">${signed(n.paper_cum_jpy)}</div></div>
+      ${rows ? `<div aria-label="ブレイクアウトの注文">${rows}</div>` : '<div class="empty">実弾の取引はまだありません</div>'}
+      ${prow ? `<div aria-label="ブレイクアウトの紙上記録">${prow}</div>` : ""}
+      <div class="note">11/5から。9:00〜15:00の高値・安値（幅10pips以上）を16:00〜20:00に15分足の終値で抜けた方向へ1晩1回。損切りは反対側の端、利確は同じ幅（1R）、ロンドン16時か3:55の早い方で決済。FX口座＋夜は商品口座の空き資金で最大サイズ。${zone}円以上は介入警戒：買いは見送り、売りは利確なしで時間切れまで持つ。更新 ${jst(n.updated_at)}</div>
       ${blockers.length ? `<div class="note warn">${blockers.map(esc).join(" / ")}</div>` : ""}`;
   }
 
