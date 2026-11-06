@@ -927,7 +927,7 @@ header>div{min-width:0} header .btn{padding:8px}
       min_denom_4: "分母下限4", min_denom_16: "分母下限16", inverse: "逆方向", no_rebalance_band: "調整幅なし" };
     const hours = report.coverage?.hours;
     const rows = Object.entries(variants).map(([name, v]) => `<tr><td>${esc(names[name] || "比較案")}</td><td class="${cls(v.total_pnl_jpy)}">${signed(v.total_pnl_jpy)}</td><td>${v.trades == null ? "—" : esc(v.trades)}</td><td>${yen(v.max_drawdown_jpy)}</td><td>${Number.isFinite(hours) ? hours.toFixed(1) + "h" : "—"}</td></tr>`).join("");
-    return `<div id="copyVariants"><div class="note">ペーパーリプレイ比較（実売買の実績ではありません）</div>${rows ? `<table class="variants" aria-label="コピー戦略のペーパー比較"><thead><tr><th>比較案</th><th>損益</th><th>取引数</th><th>最大DD</th><th>データ時間</th></tr></thead><tbody>${rows}</tbody></table><div class="note">共通予算 ${yen(report.method?.budget_jpy)} ・ データ ${jst(report.coverage?.start)}〜${jst(report.coverage?.end)}</div>` : '<div class="empty">比較データはまだありません</div>'}</div>`;
+    return `<div id="copyVariants"><div class="note">ペーパーリプレイ比較（実売買の実績ではありません）。旧エンジン条件：全員の票・調整幅25%・倍率1。今の実弾（上位10人・調整幅50%・倍率1.5）と同じ条件の比較ではありません。</div>${rows ? `<table class="variants" aria-label="コピー戦略のペーパー比較"><thead><tr><th>比較案</th><th>損益</th><th>取引数</th><th>最大DD</th><th>データ時間</th></tr></thead><tbody>${rows}</tbody></table><div class="note">共通予算 ${yen(report.method?.budget_jpy)} ・ データ ${jst(report.coverage?.start)}〜${jst(report.coverage?.end)}</div>` : '<div class="empty">比較データはまだありません</div>'}</div>`;
   }
 
   function laneDelta(key) {
@@ -1122,8 +1122,8 @@ header>div{min-width:0} header .btn{padding:8px}
   function renderCopyStopped(k) {
     const pts = (feed?.lane_pnl?.saxo_copy?.points || []).filter((q) => Number.isFinite(q.pnl_jpy)),
       total = pts.length ? pts[pts.length - 1].pnl_jpy : null, p = k.copy_paper;
-    const paper = p ? `<div class="k">紙上：コピー通り（${esc(p.since)}〜、${number(p.days)}日）</div><div class="v ${cls(p.follow_net_jpy)}">${signed(p.follow_net_jpy)}</div>
-      <div class="k">紙上：逆張り（同期間）</div><div class="v ${cls(p.inverse_net_jpy)}">${signed(p.inverse_net_jpy)}</div>`
+    const paper = p ? `<div class="k">紙上：コピー通り（${esc(p.since)}〜、${number(p.days)}日）</div><div class="v ${cls(p.follow_net_jpy)}">${p.follow_net_jpy == null ? `<span class="muted">未計測（価格不足${number(p.unknown_days ?? 0)}日）</span>` : signed(p.follow_net_jpy)}</div>
+      <div class="k">紙上：逆張り（同期間）</div><div class="v ${cls(p.inverse_net_jpy)}">${p.inverse_net_jpy == null ? `<span class="muted">未計測</span>` : signed(p.inverse_net_jpy)}</div>`
       : '<div class="k">紙上の記録</div><div class="v muted">初回記録待ち（毎朝9:20）</div>';
     $("laneSaxoCopy").innerHTML = `<div class="lane-head"><div class="t">Saxo 株・商品コピー（停止・記録のみ）</div></div>
       <div class="chips"><span class="pill warn">11/3 12:00から売買停止</span></div>
