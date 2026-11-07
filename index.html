@@ -321,7 +321,7 @@ header>div{min-width:0} header .btn{padding:8px}
     <details><summary>GMO 暗号資産トレンド</summary><p>BTC・ETH・XRP の現物を口座の30%まで保有（10/7に55%から縮小、証拠金をコピーへ回すため）（2026/9/26にLTC・BCHを外し主要3銘柄に集中）。4時間足で「14日前より高いか」「30日前より高いか」を30分ごとに判定し、両方上なら満額、片方なら半分、両方下なら売却。レバレッジ上乗せは10/6に停止（効果が小さく、コピーと向きが逆になる場面があるため）。</p></details>
     <details><summary>急騰追随</summary><p>BTC・ETH・XRPで、確定した1時間足の上昇が過去30日の標準偏差の2.5倍を超えたら、口座の15%をレバレッジで買い、12時間後に決済。</p></details>
     <details><summary>現物⇄レバレッジ 価格差</summary><p>GMOの現物とレバレッジの価格差を監視。成行側の新規建玉基準は30bp以上（0.30%）。安い方を買い、高い方を売り、差が縮んだら決済します。指値で待つ新規建玉（maker）は停止中です。</p></details>
-    <details><summary>GMO コピー（OKX上位10人）</summary><p>OKXのリーダーのうち、直近の成績が良い上位10人（決済15回以上・活動3日以上・含み損を抱え続けていない人から毎日9:00に選び直し、11/4から）の建玉を5分ごとに集計。BTC・ETH・XRP・SOL・DOGEで1人1票の買い・売りの多数決に応じてGMOレバレッジを保有します。選び直しが2日以上止まると全員の票に戻ります。基本枠は70.8万円（60万円＋10/7入金分10.8万円）＋確定損益、維持率145%まで。票が消えれば決済します。</p></details>
+    <details><summary>GMO コピー（OKX上位10人）</summary><p>OKXのリーダーのうち、直近の成績が良い上位10人（決済15回以上・活動3日以上・含み損を抱え続けていない人から毎日9:00に選び直し、11/4から）の建玉を5分ごとに集計。BTC・ETH・XRP・SOL・DOGEで銘柄ごとに1人1票、買い＋1・売り−1の差し引き（純票）を出し、「純票 ÷ 8と全銘柄の純票の絶対値の合計の大きい方」の割合で枠を配分して、10/31からその1.5倍をGMOレバレッジで保有します（1銘柄の上限は買い30%・売り50%で、これも1.5倍。合計は枠を超えません）。票の向きが変わっても1時間続くまでは動かず、目標との差が3,000円と目標の半分の大きい方を超えたときだけ売買します。選び直しが2日以上止まると全員の票に戻ります。枠はGMO口座の評価額×1.13（11/2から。それまでは70.8万円＋確定損益）で、利益・損失・入金で伸び縮みします。暗号トレンドがすべて休止中は、証拠金の余力全体まで使えます。維持率145%まで。票が消えれば決済します。</p></details>
     <details><summary>Saxo ETF・ナスダック3倍＋金（11/3再開）</summary><p>株CFD口座でTQQQを口座の半分（ナスダック100が200日線より上の間だけ）、商品CFD口座で金を全額保有。旧ETF口座のTQQQ・GLDMは9/28に清算済みで、今はCFD口座で同じ考え方の保有を再開しています。</p></details>
     <details><summary>Saxo 株・商品コピー（OKX上位トレーダー）</summary><p>OKX上位トレーダーの米国株・商品の建玉を5分ごとに集計。銘柄ごとに1人1票、買いを＋1・売りを−1として差し引き、純票数に応じて予算を配分します。分母は純票数の絶対値の合計と4の大きい方で、票が少ないと予算の一部だけを使います。SaxoのCFD（差金決済取引）で追随し、株と商品それぞれの市場時間に発注します。</p></details>
   </section>
@@ -1033,7 +1033,7 @@ header>div{min-width:0} header .btn{padding:8px}
       <div class="kv"><div class="k">損益の内訳（確定＋含み、確定は売買手数料${yen(k.trading_fee_jpy || 0)}とレバレッジ手数料の推定${yen(k.leverage_fee_est_jpy || 0)}を控除後）</div><div class="v">${signed(pnl)} ＋ ${Number.isFinite(k.unrealized_pnl_jpy) ? signed(k.unrealized_pnl_jpy) : "含み 計測前"}</div>
       <div class="k">使える枠（上限 ${yen(k.cap_jpy)}＝GMO口座の評価額×1.13で、利益・損失・入金で伸び縮み。トレンド休止中は証拠金の余力全体、10/31から目標は一律1.5倍）</div><div class="v">${yen(k.budget_jpy)}</div>
       <div class="k">票を数える人</div><div class="v">${top ? `成績上位${lf.leaders || 10}人（${lf.selection_cutoff ? esc(jst(lf.selection_cutoff)) + "選出" : "毎日9:00選出"}）` : "全員"}</div>${rows}</div>
-      <div class="note">${top ? "11/4から、OKXのリーダーのうち直近の成績が良い上位10人（毎日9:00に選び直し）の建玉だけを5分ごとに集計し、" : "OKXの上位トレーダーに加え、10/20からBinanceの上位トレーダーの新規建玉も5分ごとに集計し（Binanceの収集が止まったときはOKXのみ）、"}銘柄ごとに1人1票の多数決の向きでGMOレバレッジを保有。票が消えれば決済。損益は確定分（約定ベース）に、保有中ポジションの含み損益（取引所の評価値）を加えた合計。${(k.blockers || []).length ? " 制限: " + esc(k.blockers.join(" / ")) : ""}</div>${renderVariants()}${renderTopn(feed?.copy_topn)}`;
+      <div class="note">${top ? "11/4から、OKXのリーダーのうち直近の成績が良い上位10人（毎日9:00に選び直し）の建玉だけを5分ごとに集計し、" : "OKXの上位トレーダーに加え、10/20からBinanceの上位トレーダーの新規建玉も5分ごとに集計し（Binanceの収集が止まったときはOKXのみ）、"}銘柄ごとに1人1票の差し引き（純票）に比例した額を1.5倍でGMOレバレッジ保有（向きの変化は1時間続いてから反映）。票が消えれば決済。損益は確定分（約定ベース）に、保有中ポジションの含み損益（取引所の評価値）を加えた合計。${(k.blockers || []).length ? " 制限: " + esc(k.blockers.join(" / ")) : ""}</div>${renderVariants()}${renderTopn(feed?.copy_topn)}`;
   }
 
   // Owner 2026-11-04: top-10 rule with a 1 h (live) / 2 h / 3 h vote-confirmation wait, paper; decision D18 (11/23).
