@@ -186,6 +186,9 @@ header>div{min-width:0} header .btn{padding:8px}
     <div class="note">日本時間の日付ごとに、その日の最後の残高 − 前日の最後の残高（入金・出金は除外）。評価損益を含みます。最初の日と今日は途中までの集計です。戦略別は各戦略の損益線（GMOコピーは確定＋含みから売買手数料とレバレッジ手数料の推定を控除、価格差は確定損益、Saxoコピーは口座残高の増減＝決済＋含み）の日次差分で、暗号トレンドはトレンド枠の実測（保有分の評価損益）、GMO差は「GMO口座全体 − コピー − 価格差 − 暗号トレンド」の残りです（コピーの含み損益と口座残高の記録時刻のずれ、手数料の推定と実額の差。日々の±は大半が時刻ずれで、長い目で見るとほぼ相殺）。</div>
   </section>
 
+  <h2>最近入れた変更の成績</h2>
+  <section class="card" id="liveChanges"></section>
+
   <h2>戦略別の損益</h2>
   <section class="card" id="lanePnl">
     <div class="tabs" id="pnlRangeTabs">
@@ -559,6 +562,7 @@ header>div{min-width:0} header .btn{padding:8px}
     window.__codexTasks = f.codex_tasks || [];
     renderCodex(f.codex_tasks || []);
     renderResearch(f.research, f.codex_tasks || []);
+    renderLiveChanges(f.live_changes || []);
     renderEvents(f.events || []);
     renderHealth(f);
     renderAiUsage(f.ai_usage);
@@ -1037,6 +1041,17 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   // Owner 2026-11-04: top-10 rule with a 1 h (live) / 2 h / 3 h vote-confirmation wait, paper; decision D18 (11/23).
+  // Owner 2026-11-10: changes that went live on unproven (WATCH) evidence, with expectation, result so far and review date.
+  function renderLiveChanges(rows) {
+    const el = $("liveChanges");
+    if (!rows.length) { el.innerHTML = '<div class="note">記録なし</div>'; return; }
+    el.innerHTML = `<div style="overflow-x:auto"><table class="topn"><thead><tr><th style="text-align:left">変更</th><th>これまで</th><th>回数</th><th>判定日</th></tr></thead><tbody>${rows.map((r) =>
+      `<tr><td style="text-align:left;white-space:normal;min-width:150px"><b>${esc(r.name)}</b><div class="note" style="margin:2px 0 0">${esc(r.since.slice(5).replace("-", "/"))}〜・期待：${esc(r.expect)}</div></td>
+        <td class="${cls(r.value_jpy)}">${r.value_jpy == null ? "—" : signed(r.value_jpy)}<div class="note" style="margin:2px 0 0">${esc(r.value_label)}</div></td>
+        <td>${r.n == null ? "—" : r.n + "回"}</td><td>${esc(r.review)}</td></tr>`).join("")}</tbody></table></div>
+      <div class="note">研究では「要観察」どまり（偶然の可能性を補正すると未証明）のまま本番に入れた変更です。判定日に期待を下回っていれば元に戻します。</div>`;
+  }
+
   function renderWaits(w) {
     const names = ["1h", "2h", "3h", "1h_shock_top2"].filter((k) => w && w[k]);
     if (!names.length) return "";
