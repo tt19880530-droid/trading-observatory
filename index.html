@@ -186,6 +186,12 @@ header>div{min-width:0} header .btn{padding:8px}
     <div class="note">日本時間の日付ごとに、その日の最後の残高 − 前日の最後の残高（入金・出金は除外）。評価損益を含みます。最初の日と今日は途中までの集計です。戦略別は各戦略の損益線（GMOコピーは確定＋含みから売買手数料とレバレッジ手数料の推定を控除、価格差は確定損益、Saxoコピーは口座残高の増減＝決済＋含み）の日次差分で、暗号トレンドはトレンド枠の実測（保有分の評価損益）、GMO差は「GMO口座全体 − コピー − 価格差 − 暗号トレンド」の残りです（コピーの含み損益と口座残高の記録時刻のずれ、手数料の推定と実額の差。日々の±は大半が時刻ずれで、長い目で見るとほぼ相殺）。</div>
   </section>
 
+  <h2>前日の振り返り</h2>
+  <section class="card" id="dailyReview"></section>
+
+  <h2>向きの偏り（全部の枠の合計）</h2>
+  <section class="card" id="exposure"></section>
+
   <h2>最近入れた変更の成績</h2>
   <section class="card" id="liveChanges"></section>
 
@@ -565,6 +571,8 @@ header>div{min-width:0} header .btn{padding:8px}
     renderCodex(f.codex_tasks || []);
     renderResearch(f.research, f.codex_tasks || []);
     renderLiveChanges(f.live_changes || []);
+    renderExposure(f.exposure);
+    $("dailyReview").innerHTML = f.daily_review?.text ? `<div style="white-space:pre-wrap;font-size:13px">${esc(f.daily_review.text)}</div><div class="note">毎朝7:45にCodexが前日を振り返り（読むだけ・注文や設定の変更はしません）。${esc(jst(f.daily_review.updated_at))} 作成</div>` : '<div class="note">まだありません（毎朝7:45に作成）</div>';
     renderEvents(f.events || []);
     renderHealth(f);
     renderAiUsage(f.ai_usage);
@@ -1052,6 +1060,19 @@ header>div{min-width:0} header .btn{padding:8px}
         <td class="${cls(r.value_jpy)}">${r.value_jpy == null ? "—" : signed(r.value_jpy)}<div class="note" style="margin:2px 0 0">${esc(r.value_label)}</div></td>
         <td>${r.n == null ? "—" : r.n + "回"}</td><td>${esc(r.review)}</td></tr>`).join("")}</tbody></table></div>
       <div class="note">研究では「要観察」どまり（偶然の可能性を補正すると未証明）のまま本番に入れた変更です。判定日に期待を下回っていれば元に戻します。</div>`;
+  }
+
+  // Owner 2026-11-10: combined direction of all lanes (JPY notional), so a one-sided book before CPI/FOMC is visible.
+  function renderExposure(x) {
+    const el = $("exposure");
+    if (!x || !(x.rows || []).length) { el.innerHTML = '<div class="note">建玉なし</div>'; return; }
+    const pctTxt = x.risk_pct == null ? "—" : (x.risk_pct * 100).toFixed(0) + "%";
+    const ev = (x.upcoming_events || []).map((e) => `${esc(jst(e.at))} ${esc(e.name)}`).join("、") || "登録なし";
+    el.innerHTML = `<div class="kv"><div class="k">株・暗号資産（+は上がると得）</div><div class="v ${cls(x.risk_jpy)}">${signed(x.risk_jpy)}（総資産の${pctTxt}）</div>
+      <div class="k">金</div><div class="v">${signed(x.gold_jpy)}</div><div class="k">FX</div><div class="v">${signed(x.fx_jpy)}</div>
+      <div class="k">3日以内の重要指標</div><div class="v">${ev}</div></div>
+      <table class="topn" style="margin-top:6px"><tbody>${x.rows.map((r) => `<tr><td style="text-align:left">${esc(r.lane)}</td><td class="${cls(r.jpy)}">${signed(r.jpy)}</td></tr>`).join("")}</tbody></table>
+      <div class="note">建玉の円換算（コピーと金は目標額で近似）。株と暗号資産は同じ日に一緒に下がりやすいので、合計が大きく片寄ったまま重要指標を迎えると振れが大きくなります。</div>`;
   }
 
   function renderWaits(w) {
