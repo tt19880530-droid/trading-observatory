@@ -217,6 +217,7 @@ header>div{min-width:0} header .btn{padding:8px}
   <div class="grid two">
     <section class="card" id="laneNikkei"></section>
     <section class="card" id="laneBreakout"></section>
+    <section class="card" id="laneBreakoutEur"></section>
     <section class="card" id="laneIndex"></section>
     <section class="card" id="laneArb"></section>
   </div>
@@ -558,6 +559,7 @@ header>div{min-width:0} header .btn{padding:8px}
     renderNikkei(f.lanes.saxo_nikkei_fade || {});
     renderIndex(f.lanes.saxo_index_canary || {});
     renderBreakout(f.lanes.saxo_usdjpy_breakout || {});
+    renderBreakout(f.lanes.saxo_eurjpy_breakout || {}, "laneBreakoutEur");
     renderEfficiency(f.capital_efficiency || {});
     window.__codexTasks = f.codex_tasks || [];
     renderCodex(f.codex_tasks || []);
@@ -1217,7 +1219,11 @@ header>div{min-width:0} header .btn{padding:8px}
   function renderNikkei(n) {
     const st = n.status === "OK" ? ["ok", "稼働中"] : n.status === "IDLE" ? ["ok", "待機中"] : n.status === "BLOCKED" ? ["warn", "停止条件あり"] : n.status ? ["bad", "取得エラー"] : ["warn", "データなし"];
     const o = n.open, held = n.units_held > 0;
-    const pos = held && o ? `<span class="${o.side === "Buy" ? "pos" : "neg"}">${o.side === "Buy" ? "買" : "売"}</span> ${number(n.units_held)}単位（${jst(o.at)} 注文時 ${number(o.side === "Buy" ? o.ask : o.bid)}円）` : held ? `${number(n.units_held)}単位` : '<span class="muted">保有なし</span>';
+    const np = n.night_plan || {}, today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+    const pct = (v) => v == null ? "—" : (v >= 0 ? "+" : "") + (v * 100).toFixed(2) + "%";
+    const nightPlan = np.day === today ? (np.go ? `今日：15:10〜に買い（窓開け ${pct(np.gap)}・SOX ${pct(np.sox_ret)}）` : `今日：見送り（窓開け ${pct(np.gap)}・SOX ${pct(np.sox_ret)}${np.error ? "・" + esc(np.error) : ""}）`) : "今日の判定は9:00";
+    const stopPx = held && o && n.avg_entry && !n.night_held ? (o.side === "Buy" ? n.avg_entry * (1 - n.disaster_stop_frac) : n.avg_entry * (1 + n.disaster_stop_frac)) : null;
+    const pos = held && o ? `<span class="${o.side === "Buy" ? "pos" : "neg"}">${o.side === "Buy" ? "買" : "売"}</span> ${number(n.units_held)}単位${n.night_held ? "（夜の買い・翌朝8:46〜決済）" : ""}（平均 ${number(n.avg_entry ?? (o.side === "Buy" ? o.ask : o.bid))}円）` : held ? `${number(n.units_held)}単位` : '<span class="muted">保有なし</span>';
     const q = n.quote || {};
     const rows = (n.live_recent || []).slice().reverse().map((e) => `<div class="hrow"><div>${e.op === "CLOSE" ? "決済" : "新規"} ${e.side === "Buy" ? "買" : "売"} ${number(e.amount)}<div class="sub muted" style="font-size:11px">${jst(e.at)}${e.op === "OPEN" ? " ・ " + number(e.side === "Buy" ? e.ask : e.bid) + "円" : ""}</div></div><span class="${cls(e.pnl_estimate_jpy)}">${e.pnl_estimate_jpy != null ? signed(e.pnl_estimate_jpy) : ""}</span></div>`).join("");
     const blockers = (n.blockers || []).map((b) => NIKKEI_BLOCKERS[String(b).split(":")[0]] || b);
@@ -1227,34 +1233,41 @@ header>div{min-width:0} header .btn{padding:8px}
       <div class="k">含み損益</div><div class="v ${cls(n.unrealized_pnl_jpy)}">${signed(n.unrealized_pnl_jpy)}</div>
       <div class="k">確定損益（${n.live_days || 0}日分）</div><div class="v ${cls(n.live_cum_pnl_jpy)}">${signed(n.live_cum_pnl_jpy)}</div>
       <div class="k">累計（確定＋含み）</div><div class="v ${cls(n.lane_pnl_jpy)}">${signed(n.lane_pnl_jpy)}</div>
+      <div class="k">3%の損切り価格</div><div class="v">${stopPx ? number(Math.round(stopPx)) + "円" : '<span class="muted">昼の建玉のみ</span>'}</div>
+      <div class="k">夜の買い</div><div class="v">${esc(nightPlan)}</div>
+      <div class="k">夜の買いの確定損益</div><div class="v ${cls(n.night_cum_pnl_jpy)}">${signed(n.night_cum_pnl_jpy)}</div>
       <div class="k">取り分けた証拠金</div><div class="v">${yen(n.reserve_jpy)}</div></div>
       ${rows ? `<div aria-label="日経枠の直近の注文">${rows}</div>` : '<div class="empty">まだ注文はありません</div>'}
-      <div class="note">前夜の米国株が上げたら9:00に日経225先物CFDを売り、下げたら買う。15:00に決済、持ち越しなし。10/29から8単位（10/27〜28は5単位、10/26は1単位）、累計−4万円で自動停止。60営業日で判定。更新 ${jst(n.updated_at)}</div>
+      <div class="note">前夜の米国株が上げたら9:00に日経225先物CFDを売り、下げたら買う。15:00に決済。逆行3%で損切り（11/10〜）。枚数は口座の余力から毎朝自動（1枚あたり価格の15%）。夜の買い（11/10〜）：9時の窓開け+1%以上かつ前夜SOX+2%以上（または200日平均から10%以上乖離）の日だけ、15:10〜に買って翌朝8:46〜に売る。</div>
       ${blockers.length ? `<div class="note warn">${blockers.map(esc).join(" / ")}</div>` : ""}`;
   }
 
-  function renderBreakout(n) {
+  function renderBreakout(n, elId = "laneBreakout") {
+    const eur = n.pair === "eurjpy", unit = eur ? "ユーロ" : "ドル";
     const zone = n.intervention_zone_level || 160;
     const st = !n.status ? ["warn", "データなし"] : n.status === "IDLE" || n.status === "OK" || n.status === "BLOCKED" ? ["ok", n.execute ? "実弾で稼働中" : "紙上のみ"] : ["bad", "停止条件あり"];
     const q = n.quote || {}, p = n.position, sig = n.signal || {};
     const zonePill = n.intervention_zone ? `<span class="pill bad">介入警戒 ${zone}円以上：買い見送り・0:30まで売りを待機（利確なし・3:55まで保有）</span>` : `<span class="pill ok">${zone}円未満：通常ルール</span>`;
     const SIDE = (s) => s === "Buy" ? "買" : "売";
-    const pos = p ? `${SIDE(p.side)} ${number(p.amount)}ドル @${p.entry} ／ 損切り ${p.stop} ／ 利確 ${p.tp == null ? "なし（介入待ち）" : p.tp}` : "";
+    const pos = p ? `${SIDE(p.side)} ${number(p.amount)}${unit} @${p.entry} ／ 損切り ${p.stop} ／ 利確 ${p.tp == null ? "なし（介入待ち）" : p.tp}` : "";
     const rng = sig.high ? `${sig.low}〜${sig.high}（${sig.width_pips ?? ((sig.high - sig.low) * 100).toFixed(1)} pips）` : "";
     const rows = (n.recent || []).slice().reverse().map((e) => `<div class="hrow"><div>${e.op === "CLOSE" ? "決済" : "新規"} ${SIDE(e.side)} ${number(e.amount)}<div class="sub muted" style="font-size:11px">${jst(e.at)}${e.reason ? " ・ " + esc(e.reason) : ""}</div></div><span class="${cls(e.pnl_estimate_jpy)}">${e.pnl_estimate_jpy != null ? signed(e.pnl_estimate_jpy) : ""}</span></div>`).join("");
     const prow = (n.paper_recent || []).slice().reverse().map((e) => `<div class="hrow"><div>${SIDE(e.side)} ${e.entry}→${e.exit}<div class="sub muted" style="font-size:11px">${jst(e.opened_at)} ・ ${esc(e.reason || "")} ・ ${e.pips}pips</div></div><span class="${cls(e.pnl_jpy)}">${signed(e.pnl_jpy)}</span></div>`).join("");
     const blockers = (n.blockers || []).filter((b) => b !== "OUTSIDE_TRADING_WINDOW");
-    $("laneBreakout").innerHTML = `<div class="lane-head"><div class="t">Saxo ドル円 東京レンジ・ブレイクアウト</div><div><span class="pill ${st[0]}">${st[1]}</span></div></div>
-      <div style="margin:6px 0">${zonePill}</div>
-      <div class="kv"><div class="k">ドル円</div><div class="v">${q.bid ? `${q.bid} / ${q.ask}` : "—"}</div>
+    const lim = n.range_limits_pips || {};
+    $(elId).innerHTML = `<div class="lane-head"><div class="t">Saxo ${eur ? "ユーロ円" : "ドル円"} 東京レンジ・ブレイクアウト</div><div><span class="pill ${st[0]}">${st[1]}</span></div></div>
+      <div style="margin:6px 0">${eur ? `<span class="pill ok">ドル円が${zone}円以上の間は買い見送り</span>` : zonePill}</div>
+      <div class="kv"><div class="k">${eur ? "ユーロ円" : "ドル円"}</div><div class="v">${q.bid ? `${q.bid} / ${q.ask}` : "—"}</div>
       <div class="k">今日の東京レンジ</div><div class="v">${rng ? esc(rng) : '<span class="muted">16:00から判定</span>'}</div>
       <div class="k">保有</div><div class="v">${pos ? esc(pos) : '<span class="muted">なし</span>'}</div>
       <div class="k">含み損益</div><div class="v ${cls(n.unrealized_pnl_jpy)}">${signed(n.unrealized_pnl_jpy)}</div>
       <div class="k">確定（${n.closes || 0}回）</div><div class="v ${cls(n.realized_pnl_jpy)}">${signed(n.realized_pnl_jpy)}</div>
-      <div class="k">紙上の累計（5,000ドル・${n.paper_closes || 0}回）</div><div class="v ${cls(n.paper_cum_jpy)}">${signed(n.paper_cum_jpy)}</div></div>
+      ${eur ? `<div class="k">今日の値幅の条件</div><div class="v">${lim.min ? `${lim.min}〜${lim.max} pips` : "—"}</div>` : ""}
+      <div class="k">紙上の累計（最小単位・${n.paper_closes || 0}回）</div><div class="v ${cls(n.paper_cum_jpy)}">${signed(n.paper_cum_jpy)}</div></div>
       ${rows ? `<div aria-label="ブレイクアウトの注文">${rows}</div>` : '<div class="empty">実弾の取引はまだありません</div>'}
       ${prow ? `<div aria-label="ブレイクアウトの紙上記録">${prow}</div>` : ""}
-      <div class="note">11/5から。9:00〜15:00の高値・安値（幅10pips以上）を16:00〜20:00に15分足の終値で抜けた方向へ1晩1回。損切りは反対側の端、利確は同じ幅（1R）、ロンドン16時か3:55の早い方で決済。FX口座＋夜は商品口座の空き資金で最大サイズ。${zone}円以上は介入警戒：買いは見送り、その夜は0:30まで下抜け（売り）を待つ。介入警戒の売りは利確なしで3:55まで持つ。更新 ${jst(n.updated_at)}</div>
+      ${eur ? `<div class="note">11/10から。ドル円と同じルールで、値幅の条件だけ値動きの大きさ（14日平均）で調整。ドル円と証拠金は早い者勝ち：先に合図が出た方が全額を使い、もう一方はその夜、相手が決済済みの時だけ入る。ドル円が160円以上の間は買いを見送り。</div>` : ""}
+      <div class="note" ${eur ? "hidden" : ""}>11/5から。9:00〜15:00の高値・安値（幅10pips以上）を16:00〜20:00に15分足の終値で抜けた方向へ1晩1回。損切りは反対側の端、利確は同じ幅（1R）、ロンドン16時か3:55の早い方で決済。FX口座＋夜は商品口座の空き資金で最大サイズ。${zone}円以上は介入警戒：買いは見送り、その夜は0:30まで下抜け（売り）を待つ。介入警戒の売りは利確なしで3:55まで持つ。更新 ${jst(n.updated_at)}</div>
       ${blockers.length ? `<div class="note warn">${blockers.map(esc).join(" / ")}</div>` : ""}`;
   }
 
