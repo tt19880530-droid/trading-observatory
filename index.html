@@ -302,7 +302,17 @@ header>div{min-width:0} header .btn{padding:8px}
   </div>
 
   <div class="page" id="page-research" hidden>
-  <h2>研究の結果</h2>
+  <h2>ひとことで</h2>
+  <section class="card" id="resHead"></section>
+  <h2>本番で動いている枠</h2>
+  <section class="card" id="resLive"></section>
+  <h2>わかったこと</h2>
+  <section class="card" id="resLearned"></section>
+  <h2>やめた系統（もう試さない）</h2>
+  <section class="card" id="resDead"></section>
+  <h2>いま走っている研究</h2>
+  <section class="card" id="resRunning"></section>
+  <h2>研究の全記録</h2>
   <section class="card">
     <div class="tabs" id="resTabs" style="margin-bottom:10px"></div>
     <div id="resList"></div>
@@ -1185,6 +1195,7 @@ header>div{min-width:0} header .btn{padding:8px}
       return `<details><summary><span class="pill ${v[0]}">${v[1]}</span> ${esc(x.idea)} <span class="muted" style="font-size:11px">${esc(x.date)}</span></summary>
         <div class="note" style="margin:6px 0 10px">${esc(x.key)}${x.folder ? `<br>報告: docs/research/ideas/${esc(x.folder)}` : ""}</div></details>`;
     }).join("") : '<div class="empty">該当なし</div>';
+    renderResearchSummary(resData.summary, resData.fable, c, total, tasks);
     const bl = resData.backlog || {};
     const keys = Object.keys(bl);
     $("resBacklog").innerHTML = keys.length ? keys.map((k) => `<div class="note" style="margin:10px 0 4px"><b>${esc(TRACK[k] || k)}</b> ・ 残り ${bl[k].length}件</div>` +
@@ -1195,6 +1206,30 @@ header>div{min-width:0} header .btn{padding:8px}
       const st = t.state === "running" ? ["warn", "実行中"] : t.state === "done" ? ["ok", "完了"] : t.state === "failed" ? ["bad", "失敗"] : ["warn", t.state];
       return `<div class="hrow"><div>${esc(TRACK[String(t.name).replace(/^idea-loop-?/, "") || "general"] || t.name)}<div class="sub muted" style="font-size:11px">${jst(t.started_at)}${t.finished_at ? " → " + jst(t.finished_at) : ""}</div></div><span class="pill ${st[0]}">${st[1]}</span></div>`;
     }).join("") : '<div class="empty">直近の実行記録なし（毎時5本が並列で動きます）</div>';
+  }
+  const LANE_STATE = { good: ["ok", "順調"], wait: ["warn", "判定前"], bad: ["bad", "要注意"] };
+  function renderResearchSummary(s, fable, c, total, tasks) {
+    if (!s) { ["resHead", "resLive", "resLearned", "resDead"].forEach((id) => { $(id).innerHTML = '<div class="empty">まとめはまだありません</div>'; }); }
+    else {
+      $("resHead").innerHTML = `<div style="font-size:14px;line-height:1.7">${esc(s.headline)}</div>
+        <div class="muted" style="font-size:12px;margin-top:8px">検証した案 ${total.toLocaleString("ja-JP")}本：採用・継続 ${(c.ADOPT || 0) + (c.KEEP || 0) + (c.EXTEND || 0)}・観察 ${c.WATCH || 0}・棄却 ${(c.REJECT || 0).toLocaleString("ja-JP")}　（まとめ ${esc(s.updated)} 更新、毎週日曜に書き直し）</div>
+        ${s.venues ? `<div class="note" style="margin-top:8px">${esc(s.venues)}</div>` : ""}`;
+      $("resLive").innerHTML = (s.live || []).map((x) => {
+        const st = LANE_STATE[x.state] || ["warn", x.state];
+        return `<details><summary><span class="pill ${st[0]}">${st[1]}</span> <b>${esc(x.name)}</b> <span class="muted" style="font-size:11px">${esc(x.venue)}</span> <span style="float:right;font-family:var(--mono);font-size:12px">${esc(x.result)}</span></summary>
+          <div class="note" style="margin:6px 0 10px;line-height:1.7">${esc(x.what)}<br>開始 ${esc(x.since)}・研究の見込み ${esc(x.expect)}・判定日 ${esc(x.review)}</div></details>`;
+      }).join("") + '<div class="note">「判定前」は回数が少なく、まだ良し悪しを言えない枠です。判定日に見込みを下回っていれば元に戻すか止めます。</div>';
+      $("resLearned").innerHTML = (s.learned || []).map((t) => `<div class="hrow"><div style="line-height:1.6">${esc(t)}</div></div>`).join("");
+      $("resDead").innerHTML = (s.dead_ends || []).map((x) => `<div class="hrow"><div>${esc(x.family)}</div><span class="muted" style="font-size:12px;text-align:right">${esc(x.why)}</span></div>`).join("");
+    }
+    const f = fable || {}, last = f.last || {}, q = f.queue || [];
+    const runningIdx = last.state === "RUNNING" ? 0 : -1;
+    const loops = (tasks || []).filter((t) => t.state === "running");
+    $("resRunning").innerHTML = [
+      ...loops.map((t) => `<div class="hrow"><div>${esc(t.name)}<div class="sub muted" style="font-size:11px">Codex・${jst(t.started_at)}〜</div></div><span class="pill warn">実行中</span></div>`),
+      ...q.map((t, i) => `<div class="hrow"><div>${esc(t)}<div class="sub muted" style="font-size:11px">Fable</div></div><span class="pill ${i === runningIdx ? "warn" : ""}">${i === runningIdx ? "実行中" : "毎晩1時から順に"}</span></div>`),
+      ...(f.done || []).slice(0, 3).map((t) => `<div class="hrow"><div>${esc(t)}<div class="sub muted" style="font-size:11px">Fable</div></div><span class="pill ok">完了</span></div>`)
+    ].join("") || '<div class="empty">いま走っている研究はありません</div>';
   }
   document.addEventListener("click", (e) => {
     const b = e.target.closest("#resTabs [data-v]"); if (b) { resFilter = b.dataset.v; renderResearch(resData, window.__codexTasks); }
@@ -1246,7 +1281,7 @@ header>div{min-width:0} header .btn{padding:8px}
     const pct = (v) => v == null ? "—" : (v >= 0 ? "+" : "") + (v * 100).toFixed(2) + "%";
     const nightPlan = np.day === today ? (np.go ? `今日：15:10〜に買い（窓開け ${pct(np.gap)}・SOX ${pct(np.sox_ret)}）` : `今日：見送り（窓開け ${pct(np.gap)}・SOX ${pct(np.sox_ret)}${np.error ? "・" + esc(np.error) : ""}）`) : "今日の判定は9:00";
     const stopPx = held && o && n.avg_entry && !n.night_held ? (o.side === "Buy" ? n.avg_entry * (1 - n.disaster_stop_frac) : n.avg_entry * (1 + n.disaster_stop_frac)) : null;
-    const pos = held && o ? `<span class="${o.side === "Buy" ? "pos" : "neg"}">${o.side === "Buy" ? "買" : "売"}</span> ${number(n.units_held)}単位${n.night_held ? "（夜の買い・翌朝8:46〜決済）" : ""}（平均 ${number(n.avg_entry ?? (o.side === "Buy" ? o.ask : o.bid))}円）` : held ? `${number(n.units_held)}単位` : '<span class="muted">保有なし</span>';
+    const pos = held && o ? `<span class="${o.side === "Buy" ? "pos" : "neg"}">${o.side === "Buy" ? "買" : "売"}</span> ${number(n.units_held)}単位${n.panic_hold ? "（パニック日の持ち越し・翌朝8:46〜決済）" : n.night_held ? "（夜の買い・翌朝8:46〜決済）" : ""}（平均 ${number(n.avg_entry ?? (o.side === "Buy" ? o.ask : o.bid))}円）` : held ? `${number(n.units_held)}単位` : '<span class="muted">保有なし</span>';
     const q = n.quote || {};
     const rows = (n.live_recent || []).slice().reverse().map((e) => `<div class="hrow"><div>${e.op === "CLOSE" ? "決済" : "新規"} ${e.side === "Buy" ? "買" : "売"} ${number(e.amount)}<div class="sub muted" style="font-size:11px">${jst(e.at)}${e.op === "OPEN" ? " ・ " + number(e.side === "Buy" ? e.ask : e.bid) + "円" : ""}</div></div><span class="${cls(e.pnl_estimate_jpy)}">${e.pnl_estimate_jpy != null ? signed(e.pnl_estimate_jpy) : ""}</span></div>`).join("");
     const blockers = (n.blockers || []).map((b) => NIKKEI_BLOCKERS[String(b).split(":")[0]] || b);
