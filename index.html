@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trading Observatory</title>
 <meta name="theme-color" content="#0b0f14">
-<meta name="build" content="20261030110000">
+<meta name="build" content="20261111122000">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap" media="print" onload="this.media='all'">
@@ -159,7 +159,7 @@ header>div{min-width:0} header .btn{padding:8px}
   </section>
 
   <nav class="tabs pagetabs" id="pageTabs" aria-label="表示切替">
-    <button data-p="overview" class="on">概要</button><button data-p="orders">注文履歴</button><button data-p="household">家計</button><button data-p="tax">税金</button><button data-p="fp">FP</button><button data-p="weights">票の重み</button><button data-p="ops">運用</button><button data-p="ai">AI直感</button><button data-p="research">研究</button><button data-p="tasks">依頼・進捗</button>
+    <button data-p="overview" class="on">概要</button><button data-p="review">振り返り</button><button data-p="orders">注文履歴</button><button data-p="household">家計</button><button data-p="tax">税金</button><button data-p="fp">FP</button><button data-p="weights">票の重み</button><button data-p="ops">運用</button><button data-p="ai">AI直感</button><button data-p="research">研究</button><button data-p="tasks">依頼・進捗</button>
   </nav>
 
   <div class="page" id="page-overview">
@@ -185,9 +185,6 @@ header>div{min-width:0} header .btn{padding:8px}
     <div id="calDetail" class="kv"></div>
     <div class="note">日本時間の日付ごとに、その日の最後の残高 − 前日の最後の残高（入金・出金は除外）。評価損益を含みます。最初の日と今日は途中までの集計です。戦略別は各戦略の損益線（GMOコピーは確定＋含みから売買手数料とレバレッジ手数料の推定を控除、価格差は確定損益、Saxoコピーは口座残高の増減＝決済＋含み）の日次差分で、暗号トレンドはトレンド枠の実測（保有分の評価損益）、GMO差は「GMO口座全体 − コピー − 価格差 − 暗号トレンド」の残りです（コピーの含み損益と口座残高の記録時刻のずれ、手数料の推定と実額の差。日々の±は大半が時刻ずれで、長い目で見るとほぼ相殺）。</div>
   </section>
-
-  <h2>前日の振り返り</h2>
-  <section class="card" id="dailyReview"></section>
 
   <h2>向きの偏り（全部の枠の合計）</h2>
   <section class="card" id="exposure"></section>
@@ -227,6 +224,11 @@ header>div{min-width:0} header .btn{padding:8px}
     <section class="card" id="laneIndex"></section>
     <section class="card" id="laneArb"></section>
   </div>
+  </div>
+
+  <div class="page" id="page-review" hidden>
+  <h2>前日の振り返り</h2>
+  <section class="card" id="dailyReview"></section>
   </div>
 
   <div class="page" id="page-household" hidden>
