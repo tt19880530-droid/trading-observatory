@@ -46,6 +46,17 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;ma
 .delta{background:var(--panel2);border-radius:12px;padding:8px 10px}
 .delta .k{color:var(--muted);font-size:11px}
 .delta .v{font-family:var(--mono);font-weight:600;font-size:13px;font-variant-numeric:tabular-nums}
+.lane-row{border-top:1px solid var(--line);padding:8px 0}.lane-row:first-of-type{border-top:0}
+.lane-row>summary{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;list-style:none}
+.lane-row>summary::-webkit-details-marker{display:none}
+.lane-row .nm{flex:1 1 9em;min-width:0;overflow-wrap:anywhere}
+.lane-row .res{font-family:var(--mono);font-size:12px;margin-left:auto;white-space:nowrap;font-variant-numeric:tabular-nums}
+.lane-row .when{flex-basis:100%;font-size:10.5px;font-weight:400;margin-top:-2px}
+.tband{position:relative;flex-basis:100%;height:8px;background:var(--panel2);border-radius:4px;margin-top:4px}
+.tband i{position:absolute;top:0;bottom:0;background:var(--accent);border-radius:4px}
+.tband.cond i{opacity:.45}
+.tband b{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:var(--text);border-radius:1px}
+.tscale{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin:0 0 2px}
 .pos{color:var(--pos)} .neg{color:var(--neg)} .muted{color:var(--muted)} .warn{color:var(--warn)}
 .grid{display:grid;gap:var(--gap);margin-top:var(--gap)}
 @media(min-width:760px){.grid.two{grid-template-columns:1fr 1fr}}
@@ -1241,11 +1252,17 @@ header>div{min-width:0} header .btn{padding:8px}
       $("resHead").innerHTML = `<div style="font-size:14px;line-height:1.7">${esc(s.headline)}</div>
         <div class="muted" style="font-size:12px;margin-top:8px">検証した案 ${total.toLocaleString("ja-JP")}本：採用・継続 ${(c.ADOPT || 0) + (c.KEEP || 0) + (c.EXTEND || 0)}・観察 ${c.WATCH || 0}・棄却 ${(c.REJECT || 0).toLocaleString("ja-JP")}　（まとめ ${esc(s.updated)} 更新、毎週日曜に書き直し）</div>
         ${s.venues ? `<div class="note" style="margin-top:8px">${esc(s.venues)}</div>` : ""}`;
-      $("resLive").innerHTML = (s.live || []).map((x) => {
+      const jst = new Date(Date.now() + 9 * 3600e3), nowH = jst.getUTCHours() + jst.getUTCMinutes() / 60;
+      const band = (x) => {
+        const segs = (x.hours || []).map(([a, b]) => `<i style="left:${a / 24 * 100}%;width:${(b - a) / 24 * 100}%"></i>`).join("");
+        const cond = x.when && !["毎日", "平日"].includes(x.when);
+        return x.hours ? `<div class="tband${cond ? " cond" : ""}" role="img" aria-label="稼働時間帯 ${esc(x.when || "")}">${segs}<b style="left:${nowH / 24 * 100}%"></b></div>` : "";
+      };
+      $("resLive").innerHTML = `<div class="tscale" aria-hidden="true"><span>0時</span><span>6</span><span>12</span><span>18</span><span>24</span></div>` + (s.live || []).map((x) => {
         const st = LANE_STATE[x.state] || ["warn", x.state];
-        return `<details><summary><span class="pill ${st[0]}">${st[1]}</span> <b>${esc(x.name)}</b> <span class="muted" style="font-size:11px">${esc(x.venue)}</span> <span style="float:right;font-family:var(--mono);font-size:12px">${esc(x.result)}</span></summary>
+        return `<details class="lane-row"><summary><span class="pill ${st[0]}">${st[1]}</span><span class="nm"><b>${esc(x.name)}</b> <span class="muted" style="font-size:11px">${esc(x.venue)}</span></span><span class="res">${esc(x.result)}</span>${band(x)}<span class="when muted">${esc(x.when || "")}</span></summary>
           <div class="note" style="margin:6px 0 10px;line-height:1.7">${esc(x.what)}<br>開始 ${esc(x.since)}・研究の見込み ${esc(x.expect)}・判定日 ${esc(x.review)}</div></details>`;
-      }).join("") + '<div class="note">「判定前」は回数が少なく、まだ良し悪しを言えない枠です。判定日に見込みを下回っていれば元に戻すか止めます。</div>';
+      }).join("") + '<div class="note">帯は日本時間で取引・保有する時間帯（縦線＝今）。薄い帯は条件を満たした日だけ動く枠。「判定前」は回数が少なく、まだ良し悪しを言えない枠です。判定日に見込みを下回っていれば元に戻すか止めます。</div>';
       $("resLearned").innerHTML = (s.learned || []).map((t) => `<div class="hrow"><div style="line-height:1.6">${esc(t)}</div></div>`).join("");
       $("resDead").innerHTML = (s.dead_ends || []).map((x) => `<div class="hrow"><div>${esc(x.family)}</div><span class="muted" style="font-size:12px;text-align:right">${esc(x.why)}</span></div>`).join("");
     }
