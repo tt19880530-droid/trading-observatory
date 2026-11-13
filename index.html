@@ -235,6 +235,7 @@ header>div{min-width:0} header .btn{padding:8px}
     <section class="card" id="laneBreakoutEur"></section>
     <section class="card" id="laneIndex"></section>
     <section class="card" id="laneArb"></section>
+    <section class="card" id="laneDisc"></section>
   </div>
   </div>
 
@@ -263,7 +264,7 @@ header>div{min-width:0} header .btn{padding:8px}
   <h2>注文履歴・イベント</h2>
   <section class="card">
     <div class="tabs" id="evTabs">
-      <button data-l="" class="on">すべて</button><button data-l="gmo_crypto_trend">暗号トレンド</button><button data-l="gmo_copy">GMOコピー</button><button data-l="gmo_basis_arb">価格差</button><button data-l="saxo_etf_trend">Saxo ETF</button><button data-l="saxo_copy">Saxoコピー</button><button data-l="saxo_nikkei_fade">Saxo日経</button><button data-l="saxo_usdjpy_fix">Saxo仲値</button><button data-l="saxo_index_canary">Saxo夜指数</button><button data-l="saxo_usdjpy_breakout">Saxoブレイク</button><button data-l="saxo_jp_200a_fade">Saxo 200A</button><button data-l="saxo_jp_200a_manual">200A例外</button>
+      <button data-l="" class="on">すべて</button><button data-l="gmo_crypto_trend">暗号トレンド</button><button data-l="gmo_copy">GMOコピー</button><button data-l="gmo_basis_arb">価格差</button><button data-l="saxo_etf_trend">Saxo ETF</button><button data-l="saxo_copy">Saxoコピー</button><button data-l="saxo_nikkei_fade">Saxo日経</button><button data-l="saxo_usdjpy_fix">Saxo仲値</button><button data-l="saxo_index_canary">Saxo夜指数</button><button data-l="saxo_usdjpy_breakout">Saxoブレイク</button><button data-l="saxo_jp_200a_fade">Saxo 200A</button><button data-l="owner_discretionary">裁量枠</button>
     </div>
     <div class="events" id="events" style="margin-top:12px"></div>
   </section>
@@ -588,6 +589,7 @@ header>div{min-width:0} header .btn{padding:8px}
     renderArb(f.lanes.gmo_basis_arb || {});
     renderNikkei(f.lanes.saxo_nikkei_fade || {});
     renderIndex(f.lanes.saxo_index_canary || {});
+    renderDisc(f.lanes.owner_discretionary || {});
     renderBreakout(f.lanes.saxo_usdjpy_breakout || {});
     renderBreakout(f.lanes.saxo_eurjpy_breakout || {}, "laneBreakoutEur");
     renderEfficiency(f.capital_efficiency || {});
@@ -707,7 +709,7 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   let calMonth = null, calMode = "day", calSel = null, calLane = "all";
-  const CAL_LANES = [["all", "全体"], ["copy", "GMOコピー"], ["arb", "価格差"], ["trend", "暗号トレンド"], ["gap", "GMO差"], ["saxo", "Saxo株・商品CFD"], ["nikkei", "Saxo日経"], ["index", "Saxo夜指数"], ["fx", "Saxo仲値"], ["brk", "Saxoブレイク"], ["a200", "Saxo 200A"]];
+  const CAL_LANES = [["all", "全体"], ["copy", "GMOコピー"], ["arb", "価格差"], ["trend", "暗号トレンド"], ["gap", "GMO差"], ["saxo", "Saxo株・商品CFD"], ["nikkei", "Saxo日経"], ["index", "Saxo夜指数"], ["fx", "Saxo仲値"], ["brk", "Saxoブレイク"], ["a200", "Saxo 200A"], ["disc", "裁量枠"]];
   const dayKey = (t) => new Date(t).toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
   function dailyPnl(f) {
     const hist = f.equity_history || [], flows = f.capital_changes?.events || [];
@@ -728,7 +730,7 @@ header>div{min-width:0} header .btn{padding:8px}
                  dep: dp.total, cum, partial: i === 0 };
       prev = cur;
     });
-    const src = { copy: "gmo_copy", arb: "gmo_basis_arb", gmo: "gmo_crypto_trend", saxo: "saxo_copy", saxoetf: "saxo_etf_trend", nikkei: "saxo_nikkei_fade", index: "saxo_index_canary", fx: "saxo_usdjpy_fix", brk: "saxo_usdjpy_breakout", a200: "saxo_jp_200a_fade", tm: "gmo_trend_measured" }, lastOf = {}, lp = {}, lc = {};
+    const src = { copy: "gmo_copy", arb: "gmo_basis_arb", gmo: "gmo_crypto_trend", saxo: "saxo_copy", saxoetf: "saxo_etf_trend", nikkei: "saxo_nikkei_fade", index: "saxo_index_canary", fx: "saxo_usdjpy_fix", brk: "saxo_usdjpy_breakout", a200: "saxo_jp_200a_fade", disc: "owner_discretionary", tm: "gmo_trend_measured" }, lastOf = {}, lp = {}, lc = {};
     for (const [k, key] of Object.entries(src)) {
       lastOf[k] = new Map();
       (f.lane_pnl?.[key]?.points || []).filter((q) => Number.isFinite(q.pnl_jpy)).sort((a, b) => Date.parse(a.t) - Date.parse(b.t))
@@ -744,7 +746,7 @@ header>div{min-width:0} header .btn{padding:8px}
       // Trend = the allocator's own measured line; the rest of the GMO account change (copy unrealised sampled at a
       // different minute, fee estimates vs actual) is shown as its own "GMO差" so it is not mistaken for trend PnL.
       dl.trend = dl.tm; dl.gap = dl.gmo - dl.copy - dl.arb - dl.tm;
-      const l = { all: out[d].total, copy: dl.copy, arb: dl.arb, trend: dl.trend, gap: dl.gap, saxo: dl.saxo + dl.saxoetf, nikkei: dl.nikkei, index: dl.index, fx: dl.fx, brk: dl.brk, a200: dl.a200 }, c = {};
+      const l = { all: out[d].total, copy: dl.copy, arb: dl.arb, trend: dl.trend, gap: dl.gap, saxo: dl.saxo + dl.saxoetf, nikkei: dl.nikkei, index: dl.index, fx: dl.fx, brk: dl.brk, a200: dl.a200, disc: dl.disc }, c = {};
       for (const k of Object.keys(l)) { lc[k] = (lc[k] || 0) + (l[k] || 0); c[k] = lc[k]; }
       out[d].lane = l; out[d].lcum = c;
     });
@@ -893,11 +895,11 @@ header>div{min-width:0} header .btn{padding:8px}
     ["total_all", "全体（GMO＋Saxo・入金除く）", "var(--text)"],
     ["gmo_copy", "GMOコピー", "var(--k-copy)"], ["gmo_basis_arb", "価格差", "var(--k-arb)"],
     ["saxo_copy", "Saxoコピー（11/3停止まで）", "var(--k-saxo)"], ["saxo_etf_trend", "Saxo ETF再開（11/3〜）", "var(--accent)"], ["saxo_nikkei_fade", "Saxo日経（確定＋含み）", "var(--k-nikkei)"],
-    ["saxo_usdjpy_fix", "Saxo仲値（確定＋含み）", "var(--k-fx)"], ["saxo_index_canary", "Saxo夜指数（確定＋含み）", "var(--k-trend2)"], ["saxo_usdjpy_breakout", "Saxoブレイク（確定＋含み）", "var(--k-fx)"], ["saxo_jp_200a_fade", "Saxo 200A（確定＋含み・11/13〜）", "var(--k-nikkei)"], ["saxo_jp_200a_manual", "200A 例外枠（手動）", "var(--k-trend2)"],
+    ["saxo_usdjpy_fix", "Saxo仲値（確定＋含み）", "var(--k-fx)"], ["saxo_index_canary", "Saxo夜指数（確定＋含み）", "var(--k-trend2)"], ["saxo_usdjpy_breakout", "Saxoブレイク（確定＋含み）", "var(--k-fx)"], ["saxo_jp_200a_fade", "Saxo 200A（確定＋含み・11/13〜）", "var(--k-nikkei)"], ["owner_discretionary", "裁量・例外枠（手動）", "var(--k-trend2)"],
     ["gmo_trend_only", "トレンド主体（推定）", "var(--k-trend)"], ["gmo_trend_measured", "トレンド実測（10/7〜）", "var(--k-trend2)"],
     ["gmo_crypto_trend", "GMO口座全体（トレンド含む）", "var(--k-gmo)"],
   ];
-  const PNL_DEFAULT = ["total_all", "gmo_copy", "gmo_basis_arb", "saxo_copy", "saxo_etf_trend", "saxo_nikkei_fade", "saxo_usdjpy_fix", "saxo_index_canary", "saxo_usdjpy_breakout", "saxo_jp_200a_fade", "saxo_jp_200a_manual", "gmo_trend_measured"];
+  const PNL_DEFAULT = ["total_all", "gmo_copy", "gmo_basis_arb", "saxo_copy", "saxo_etf_trend", "saxo_nikkei_fade", "saxo_usdjpy_fix", "saxo_index_canary", "saxo_usdjpy_breakout", "saxo_jp_200a_fade", "owner_discretionary", "gmo_trend_measured"];
   function pnlShown() {
     try {
       const v = JSON.parse(localStorage.getItem("pnlShown")), known = JSON.parse(localStorage.getItem("pnlKnown") || "null");
@@ -1373,6 +1375,18 @@ header>div{min-width:0} header .btn{padding:8px}
       ${blockers.length ? `<div class="note warn">${blockers.map(esc).join(" / ")}</div>` : ""}`;
   }
 
+  function renderDisc(d) {
+    const ACC = { saxo_stock: "Saxo株CFD", saxo_fx: "Saxo FX", saxo_commodity: "Saxo商品", gmo: "GMO" };
+    const rows = (d.trades || []).slice().reverse().map((t) => `<div class="hrow"><div>${esc(t.instrument)} ${t.side === "Buy" ? "買" : "売"} ${number(t.qty)} @${number(t.open_price)}${t.status === "closed" ? ` → ${number(t.close_price)}` : t.price != null ? ` ・今 ${number(t.price)}` : ""}<div class="sub muted" style="font-size:11px">${jst(t.opened_at)}${t.closed_at ? "→" + jst(t.closed_at) : "〜保有中"} ・ ${esc(ACC[t.account] || t.account || "")}${t.note ? " ・ " + esc(t.note) : ""}</div></div><span class="${cls(t.pnl_jpy)}">${t.pnl_jpy != null ? signed(t.pnl_jpy) : "—"}</span></div>`).join("");
+    const st = d.error ? ["bad", "読み込み失敗"] : d.open ? ["ok", `保有中 ${d.open}件`] : ["warn", "保有なし"];
+    $("laneDisc").innerHTML = `<div class="lane-head"><div class="t">裁量・例外枠（オーナー手動）</div><div><span class="pill ${st[0]}">${st[1]}</span></div></div>
+      <div class="kv"><div class="k">累計（確定＋含み）</div><div class="v ${cls(d.total_pnl_jpy)}">${signed(d.total_pnl_jpy)}</div>
+      <div class="k">確定（${d.closed || 0}回）</div><div class="v ${cls(d.realized_pnl_jpy)}">${signed(d.realized_pnl_jpy)}</div>
+      <div class="k">含み（公開価格）</div><div class="v ${cls(d.unrealized_pnl_jpy)}">${d.unrealized_unknown ? "一部不明" : signed(d.unrealized_pnl_jpy)}</div></div>
+      ${rows ? `<div aria-label="裁量枠の取引">${rows}</div>` : '<div class="empty">まだ取引はありません</div>'}
+      <div class="note">オーナーが手動で発注した取引（自動レーンの外）。Claudeが約定を読み取りで確認して記録。同じ銘柄の自動レーンはこの株数を自分の保有とみなしません。更新 ${jst(d.generated_at)}</div>`;
+  }
+
   function renderIndex(n) {
     const st = !n.status ? ["warn", "データなし"] : n.status === "OK" ? ["ok", n.execute ? "実弾で稼働中" : "紙上のみ"] : ["bad", "停止条件あり"];
     const RULE = { SPX_GAP_FADE: "米国500 ギャップ逆張り", EU50_US_OPEN: "欧州50 NY寄り追随", NAS_ORB15: "ナスダック100 寄り付きブレイク（紙上のみ）" };
@@ -1429,7 +1443,7 @@ header>div{min-width:0} header .btn{padding:8px}
       ${open.length ? `<div class="chips">${open.map((o) => `<span class="chip">${o}</span>`).join("")}</div>` : ""}`;
   }
 
-  const LANE = { gmo_crypto_trend: ["暗号", "₿"], gmo_basis_arb: ["価格差", "⇄"], saxo_etf_trend: ["Saxo ETF", "S"], saxo_copy: ["Saxoコピー", "⧉"], gmo_copy: ["GMOコピー", "⧉"], saxo_nikkei_fade: ["Saxo日経", "N"], saxo_usdjpy_fix: ["Saxo仲値", "¥"], saxo_index_canary: ["Saxo夜指数", "I"], saxo_usdjpy_breakout: ["Saxoブレイク", "B"], saxo_jp_200a_fade: ["Saxo 200A", "A"], saxo_jp_200a_manual: ["200A例外", "M"] };
+  const LANE = { gmo_crypto_trend: ["暗号", "₿"], gmo_basis_arb: ["価格差", "⇄"], saxo_etf_trend: ["Saxo ETF", "S"], saxo_copy: ["Saxoコピー", "⧉"], gmo_copy: ["GMOコピー", "⧉"], saxo_nikkei_fade: ["Saxo日経", "N"], saxo_usdjpy_fix: ["Saxo仲値", "¥"], saxo_index_canary: ["Saxo夜指数", "I"], saxo_usdjpy_breakout: ["Saxoブレイク", "B"], saxo_jp_200a_fade: ["Saxo 200A", "A"], owner_discretionary: ["裁量枠", "M"] };
   function renderEvents(evs) {
     const list = evs.filter((e) => !evLane || e.lane === evLane).slice().reverse().slice(0, 60);
     $("events").innerHTML = list.map((e) => {
