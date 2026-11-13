@@ -1376,7 +1376,7 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   function renderDisc(d) {
-    const ACC = { saxo_stock: "Saxo株CFD", saxo_fx: "Saxo FX", saxo_commodity: "Saxo商品", gmo: "GMO" };
+    const ACC = { saxo_stock: "Saxo株CFD", saxo_fx: "Saxo FX", saxo_commodity: "Saxo商品", gmo: "GMO", gmo_cryptofx: "GMO暗号資産FX" };
     const rows = (d.trades || []).slice().reverse().map((t) => `<div class="hrow"><div>${esc(t.instrument)} ${t.side === "Buy" ? "買" : "売"} ${number(t.qty)} @${number(t.open_price)}${t.status === "closed" ? ` → ${number(t.close_price)}` : t.price != null ? ` ・今 ${number(t.price)}` : ""}<div class="sub muted" style="font-size:11px">${jst(t.opened_at)}${t.closed_at ? "→" + jst(t.closed_at) : "〜保有中"} ・ ${esc(ACC[t.account] || t.account || "")}${t.note ? " ・ " + esc(t.note) : ""}</div></div><span class="${cls(t.pnl_jpy)}">${t.pnl_jpy != null ? signed(t.pnl_jpy) : "—"}</span></div>`).join("");
     const st = d.error ? ["bad", "読み込み失敗"] : d.open ? ["ok", `保有中 ${d.open}件`] : ["warn", "保有なし"];
     $("laneDisc").innerHTML = `<div class="lane-head"><div class="t">裁量・例外枠（オーナー手動）</div><div><span class="pill ${st[0]}">${st[1]}</span></div></div>
