@@ -263,7 +263,7 @@ header>div{min-width:0} header .btn{padding:8px}
   <h2>注文履歴・イベント</h2>
   <section class="card">
     <div class="tabs" id="evTabs">
-      <button data-l="" class="on">すべて</button><button data-l="gmo_crypto_trend">暗号トレンド</button><button data-l="gmo_copy">GMOコピー</button><button data-l="gmo_basis_arb">価格差</button><button data-l="saxo_etf_trend">Saxo ETF</button><button data-l="saxo_copy">Saxoコピー</button><button data-l="saxo_nikkei_fade">Saxo日経</button><button data-l="saxo_usdjpy_fix">Saxo仲値</button><button data-l="saxo_index_canary">Saxo夜指数</button><button data-l="saxo_usdjpy_breakout">Saxoブレイク</button><button data-l="saxo_jp_200a_fade">Saxo 200A</button>
+      <button data-l="" class="on">すべて</button><button data-l="gmo_crypto_trend">暗号トレンド</button><button data-l="gmo_copy">GMOコピー</button><button data-l="gmo_basis_arb">価格差</button><button data-l="saxo_etf_trend">Saxo ETF</button><button data-l="saxo_copy">Saxoコピー</button><button data-l="saxo_nikkei_fade">Saxo日経</button><button data-l="saxo_usdjpy_fix">Saxo仲値</button><button data-l="saxo_index_canary">Saxo夜指数</button><button data-l="saxo_usdjpy_breakout">Saxoブレイク</button><button data-l="saxo_jp_200a_fade">Saxo 200A</button><button data-l="saxo_jp_200a_manual">200A例外</button>
     </div>
     <div class="events" id="events" style="margin-top:12px"></div>
   </section>
@@ -893,11 +893,11 @@ header>div{min-width:0} header .btn{padding:8px}
     ["total_all", "全体（GMO＋Saxo・入金除く）", "var(--text)"],
     ["gmo_copy", "GMOコピー", "var(--k-copy)"], ["gmo_basis_arb", "価格差", "var(--k-arb)"],
     ["saxo_copy", "Saxoコピー（11/3停止まで）", "var(--k-saxo)"], ["saxo_etf_trend", "Saxo ETF再開（11/3〜）", "var(--accent)"], ["saxo_nikkei_fade", "Saxo日経（確定＋含み）", "var(--k-nikkei)"],
-    ["saxo_usdjpy_fix", "Saxo仲値（確定＋含み）", "var(--k-fx)"], ["saxo_index_canary", "Saxo夜指数（確定＋含み）", "var(--k-trend2)"], ["saxo_usdjpy_breakout", "Saxoブレイク（確定＋含み）", "var(--k-fx)"], ["saxo_jp_200a_fade", "Saxo 200A（確定＋含み・11/13〜）", "var(--k-nikkei)"],
+    ["saxo_usdjpy_fix", "Saxo仲値（確定＋含み）", "var(--k-fx)"], ["saxo_index_canary", "Saxo夜指数（確定＋含み）", "var(--k-trend2)"], ["saxo_usdjpy_breakout", "Saxoブレイク（確定＋含み）", "var(--k-fx)"], ["saxo_jp_200a_fade", "Saxo 200A（確定＋含み・11/13〜）", "var(--k-nikkei)"], ["saxo_jp_200a_manual", "200A 例外枠（手動）", "var(--k-trend2)"],
     ["gmo_trend_only", "トレンド主体（推定）", "var(--k-trend)"], ["gmo_trend_measured", "トレンド実測（10/7〜）", "var(--k-trend2)"],
     ["gmo_crypto_trend", "GMO口座全体（トレンド含む）", "var(--k-gmo)"],
   ];
-  const PNL_DEFAULT = ["total_all", "gmo_copy", "gmo_basis_arb", "saxo_copy", "saxo_etf_trend", "saxo_nikkei_fade", "saxo_usdjpy_fix", "saxo_index_canary", "saxo_usdjpy_breakout", "saxo_jp_200a_fade", "gmo_trend_measured"];
+  const PNL_DEFAULT = ["total_all", "gmo_copy", "gmo_basis_arb", "saxo_copy", "saxo_etf_trend", "saxo_nikkei_fade", "saxo_usdjpy_fix", "saxo_index_canary", "saxo_usdjpy_breakout", "saxo_jp_200a_fade", "saxo_jp_200a_manual", "gmo_trend_measured"];
   function pnlShown() {
     try {
       const v = JSON.parse(localStorage.getItem("pnlShown")), known = JSON.parse(localStorage.getItem("pnlKnown") || "null");
@@ -1429,7 +1429,7 @@ header>div{min-width:0} header .btn{padding:8px}
       ${open.length ? `<div class="chips">${open.map((o) => `<span class="chip">${o}</span>`).join("")}</div>` : ""}`;
   }
 
-  const LANE = { gmo_crypto_trend: ["暗号", "₿"], gmo_basis_arb: ["価格差", "⇄"], saxo_etf_trend: ["Saxo ETF", "S"], saxo_copy: ["Saxoコピー", "⧉"], gmo_copy: ["GMOコピー", "⧉"], saxo_nikkei_fade: ["Saxo日経", "N"], saxo_usdjpy_fix: ["Saxo仲値", "¥"], saxo_index_canary: ["Saxo夜指数", "I"], saxo_usdjpy_breakout: ["Saxoブレイク", "B"], saxo_jp_200a_fade: ["Saxo 200A", "A"] };
+  const LANE = { gmo_crypto_trend: ["暗号", "₿"], gmo_basis_arb: ["価格差", "⇄"], saxo_etf_trend: ["Saxo ETF", "S"], saxo_copy: ["Saxoコピー", "⧉"], gmo_copy: ["GMOコピー", "⧉"], saxo_nikkei_fade: ["Saxo日経", "N"], saxo_usdjpy_fix: ["Saxo仲値", "¥"], saxo_index_canary: ["Saxo夜指数", "I"], saxo_usdjpy_breakout: ["Saxoブレイク", "B"], saxo_jp_200a_fade: ["Saxo 200A", "A"], saxo_jp_200a_manual: ["200A例外", "M"] };
   function renderEvents(evs) {
     const list = evs.filter((e) => !evLane || e.lane === evLane).slice().reverse().slice(0, 60);
     $("events").innerHTML = list.map((e) => {
