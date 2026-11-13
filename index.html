@@ -566,7 +566,16 @@ header>div{min-width:0} header .btn{padding:8px}
     // Change over the window, excluding owner-confirmed deposits dated inside it, with a percentage.
     const flows = (f.capital_changes?.events || []);
     [["d24", 24], ["d7", 168], ["dAll", 0]].forEach(([id, h]) => {
-      const c = changeSince(hist, h), el = $(id);
+      const el = $(id);
+      // "since start": the feed ships only recent history, so use the server-side whole-period figure (9/26〜)
+      const tot = f.capital_changes?.accounts?.total;
+      if (id === "dAll" && tot && tot.change_less_confirmed_flows_jpy != null) {
+        const d = tot.change_less_confirmed_flows_jpy, base = tot.baseline_jpy + (tot.confirmed_net_deposits_jpy || 0);
+        el.className = "v " + cls(d);
+        el.innerHTML = `${signed(d)}<div style="font-size:12px">(${(d / base * 100 >= 0 ? "+" : "") + (d / base * 100).toFixed(1)}%)</div><div class="muted" style="font-size:10px">入金除く・9/26〜</div>`;
+        return;
+      }
+      const c = changeSince(hist, h);
       if (!c) { el.className = "v muted"; el.textContent = "—"; return; }
       const fromDay = new Date(c.baseT).toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
       // a deposit with a known landing time counts only if it landed after the baseline snapshot
