@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trading Observatory</title>
 <meta name="theme-color" content="#0b0f14">
-<meta name="build" content="20261111122000">
+<meta name="build" content="20261114100500">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap" media="print" onload="this.media='all'">
@@ -71,7 +71,7 @@ h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
 .legend button.lg i{margin-right:0}
 .legend button.lg.off{opacity:.4;text-decoration:line-through}
 .legend i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
-.tip{position:absolute;pointer-events:none;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 9px;font-size:12px;white-space:nowrap;transform:translate(-50%,-110%);display:none}
+.tip{position:absolute;pointer-events:none;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 9px;font-size:12px;white-space:normal;max-width:calc(100vw - 32px);width:max-content;box-sizing:border-box;transform:translate(-50%,-110%);display:none}
 .lane-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .lane-head .t{font-weight:700}
 .lane-head .v{font-family:var(--mono);font-weight:600;font-size:19px;font-variant-numeric:tabular-nums}
@@ -160,7 +160,7 @@ header>div{min-width:0} header .btn{padding:8px}
   <section class="card hero">
     <div class="label">合計評価額</div>
     <div class="big" id="total">—</div>
-    <div class="note">増減（確認済みの入金を除く）</div>
+    <div class="note">増減（確認済みの入出金を除く）</div>
     <div class="deltas">
       <div class="delta"><div class="k">24時間</div><div class="v" id="d24">—</div></div>
       <div class="delta"><div class="k">7日</div><div class="v" id="d7">—</div></div>
@@ -175,6 +175,7 @@ header>div{min-width:0} header .btn{padding:8px}
 
   <div class="page" id="page-overview">
   <h2>評価額の推移</h2>
+  <div class="note" id="historyWarning"></div>
   <section class="card">
     <div class="tabs" id="rangeTabs">
       <button data-r="1">24時間</button><button data-r="7" class="on">7日</button><button data-r="30">30日</button><button data-r="0">全期間</button>
@@ -194,7 +195,7 @@ header>div{min-width:0} header .btn{padding:8px}
     <div class="cal-sum" id="calSum"></div>
     <div class="cal" id="calGrid"></div>
     <div id="calDetail" class="kv"></div>
-    <div class="note">日本時間の日付ごとに、その日の最後の残高 − 前日の最後の残高（入金・出金は除外）。評価損益を含みます。最初の日と今日は途中までの集計です。戦略別は各戦略の損益線（GMOコピーは確定＋含みから売買手数料とレバレッジ手数料の推定を控除、価格差は確定損益、TQQQ・金（旧Saxoコピー）は口座残高の増減＝決済＋含み）の日次差分で、暗号トレンドはトレンド枠の実測（保有分の評価損益）、GMO差は「GMO口座全体 − コピー − 価格差 − 暗号トレンド」の残りです（コピーの含み損益と口座残高の記録時刻のずれ、手数料の推定と実額の差。日々の±は大半が時刻ずれで、長い目で見るとほぼ相殺）。</div>
+    <div class="note">日本時間の各日最終評価と前日最終評価の差から、確認済み純入出金を調整。初日は記録開始時刻からの部分日です。全体・各内訳とも全保存履歴の共通時刻で算出。GMO未配賦差は口座損益からコピー・価格差・トレンド実測・裁量GMOを除いた残り、Saxo未配賦差は各Saxoレーンと裁量の帰属後の残りです。未配賦差の原因や最終額は未照合で、利益や費用とは断定しません。旧Saxoコピーと11/3以降のTQQQ・金は別表示。</div>
   </section>
 
   <h2>向きの偏り（全部の枠の合計）</h2>
@@ -213,8 +214,8 @@ header>div{min-width:0} header .btn{padding:8px}
     <div class="legend" id="pnlLegend"></div>
     <div class="pnl-values" id="pnlValues"></div>
     <details id="ddBox" style="margin-top:10px"><summary style="font-size:13px;font-weight:600">下落の深さと長さ（記録開始から）</summary><div id="ddTable"></div></details>
-    <div class="note">太い線＝実際の総損益（入金除く）。凡例をタップすると線の表示/非表示を切り替えられます。「トレンド主体（推定）」と「GMO口座全体」は口座残高が30分ごとの更新で他の線と時刻がずれるため、急な上下（スパイク）は実際の損益ではなく見かけの動きを含みます。初期表示では隠しています。</div>
-    <details class="note"><summary>各線の説明</summary>全体：GMO＋Saxo全口座の評価額の増減（確認済みの入出金3件を除く）。ここが実際の総損益です。トレンド実測と推定が一致しないのは、実測がトレンドの保有分だけの評価額変化なのに対し、推定は口座全体の増減から他を引いた残りで、価格差の含み損益・手数料・スワップ（コピーの手数料・carry推定約2.5千円は推定線に流れ込みます）・コピー推定の誤差・GMO評価額の30分更新ずれが全部混ざるためです。トレンド実測：2026-10-07からトレンド側が評価額を毎回記録しており、評価額の変化から買い増し・売却の額を除いた損益（記録開始前は測れません）。トレンド主体（推定）：GMO口座全体の増減からコピーと価格差の確定損益を引いた残り。トレンド売買に加え、コピーなど未決済ポジションの含み損益・手数料・スワップを含むため参考値です。GMO口座全体：評価額の増減（確認済みの入出金を除く＝損益、トレンド・コピー・価格差を含む）。GMOコピー：確定損益＋保有中ポジションの含み損益（含みは記録開始以降）。トレンド主体はコピーの含み損益も引いてあります。TQQQ・金（11/3までは旧Saxoコピー）：CFD口座の残高増減（決済＋含み損益）。価格差：決済損益（約定ベース、一部推定）。GMO口座は2026-10-02に10万円を入金（グラフでは入金分を除外）。Saxo ETF口座はCFD口座へ振替中のため損益線なし。残高増減を損益線として描画しません。各戦略の数値は口座全体の損益ではありません。</details>
+    <div class="note">太い線＝実際の総損益（入出金を除く）。凡例をタップすると線の表示/非表示を切り替えられます。「トレンド主体（推定）」と「GMO口座全体」は口座残高が30分ごとの更新で他の線と時刻がずれるため、急な上下（スパイク）は実際の損益ではなく見かけの動きを含みます。初期表示では隠しています。</div>
+    <details class="note"><summary>各線の説明</summary>全体はGMO＋Saxoの評価額増減から確認済み純入出金を調整した値。標準表示の戦略・裁量・未配賦差を合計すると全体になります（円丸め差を除く）。GMOコピーは記録済み決済＋含み−売買手数料−推定保有料。価格差は決済記録（一部推定）。トレンド実測は10/7からの保有評価額変化から売買額を除いた値。それ以前の未測定分、評価時刻差、未記録費用等は未配賦差に残します。TQQQ・金の保有は11/3の切替から。旧Saxoコピーは切替前まで。旧ETF口座には損益線を表示しません。補助線「トレンド主体」「GMO口座全体」は合計対象外です。</details>
   </section>
 
   <h2>資金効率（証拠金1万円を1時間使って何円）</h2>
@@ -236,6 +237,7 @@ header>div{min-width:0} header .btn{padding:8px}
     <section class="card" id="laneIndex"></section>
     <section class="card" id="laneArb"></section>
     <section class="card" id="laneDisc"></section>
+    <section class="card" id="lane200A"></section>
   </div>
   </div>
 
@@ -264,7 +266,7 @@ header>div{min-width:0} header .btn{padding:8px}
   <h2>注文履歴・イベント</h2>
   <section class="card">
     <div class="tabs" id="evTabs">
-      <button data-l="" class="on">すべて</button><button data-l="gmo_crypto_trend">暗号トレンド</button><button data-l="gmo_copy">GMOコピー</button><button data-l="gmo_basis_arb">価格差</button><button data-l="saxo_etf_trend">TQQQ・金の保有</button><button data-l="saxo_copy">TQQQ・金（注文）</button><button data-l="saxo_nikkei_fade">Saxo日経</button><button data-l="saxo_usdjpy_fix">Saxo仲値</button><button data-l="saxo_index_canary">Saxo夜指数</button><button data-l="saxo_usdjpy_breakout">Saxoブレイク</button><button data-l="saxo_jp_200a_fade">Saxo 200A</button><button data-l="owner_discretionary">裁量枠</button>
+      <button data-l="" class="on">すべて</button><button data-l="gmo_crypto_trend">暗号トレンド</button><button data-l="gmo_copy">GMOコピー</button><button data-l="gmo_basis_arb">価格差</button><button data-l="saxo_etf_trend">旧ETF口座</button><button data-l="saxo_copy">TQQQ・金の保有</button><button data-l="saxo_nikkei_fade">Saxo日経</button><button data-l="saxo_usdjpy_fix">Saxo仲値</button><button data-l="saxo_index_canary">Saxo夜指数</button><button data-l="saxo_usdjpy_breakout">Saxoブレイク</button><button data-l="saxo_eurjpy_breakout">Saxoユーロ円</button><button data-l="saxo_jp_200a_fade">Saxo 200A</button><button data-l="owner_discretionary">裁量枠</button>
     </div>
     <div class="events" id="events" style="margin-top:12px"></div>
   </section>
@@ -302,13 +304,13 @@ header>div{min-width:0} header .btn{padding:8px}
   <section class="card">
     <div id="fpDayHead"></div>
     <div class="chart"><svg id="fpDayChart" role="img" aria-label="日ごとの運用利回りと必要な日利"></svg></div>
-    <div class="note">棒は日本時間の1日ごとの運用利回り（その日の入金を除く・前日終値比）。横線が必要な日利（暦日ベース）。緑は必要な日利以上、赤は未満。直近60日まで。</div>
+    <div class="note">棒は日本時間の1日ごとの運用利回り（その日の入出金を除く・前日終値比）。横線が必要な日利（暦日ベース）。緑は必要な日利以上、赤は未満。直近60日まで。</div>
   </section>
   <h2>月ごとの達成（必要な月利との比較）</h2>
   <section class="card">
     <div id="fpMonHead"></div>
     <div class="chart"><svg id="fpMonChart" role="img" aria-label="月ごとの運用利回りと必要な月利"></svg></div>
-    <div class="note">棒は月ごとの運用利回り（その月の入金を除く・前月末比）。横線が必要な月利。今月は途中までの値です。</div>
+    <div class="note">棒は月ごとの運用利回り（その月の入出金を除く・前月末比）。横線が必要な月利。今月は途中までの値です。</div>
   </section>
   <h2>毎年の目安</h2>
   <section class="card" id="fpYears"></section>
@@ -317,7 +319,7 @@ header>div{min-width:0} header .btn{padding:8px}
   <div class="page" id="page-research" hidden>
   <h2>ひとことで</h2>
   <section class="card" id="resHead"></section>
-  <h2>本番で動いている枠</h2>
+  <h2>週次の運用スナップショット（現在値はレーン一覧）</h2>
   <section class="card" id="resLive"></section>
   <h2>わかったこと</h2>
   <section class="card" id="resLearned"></section>
@@ -353,11 +355,11 @@ header>div{min-width:0} header .btn{padding:8px}
 
   <h2>戦略のしくみ</h2>
   <section class="card rules">
-    <details><summary>GMO 暗号資産トレンド</summary><p>BTC・ETH・XRP の現物を口座の30%まで保有（10/7に55%から縮小、証拠金をコピーへ回すため）（2026/9/26にLTC・BCHを外し主要3銘柄に集中）。4時間足で「14日前より高いか」「30日前より高いか」を30分ごとに判定し、両方上なら満額、片方なら半分、両方下なら売却。レバレッジ上乗せは10/6に停止（効果が小さく、コピーと向きが逆になる場面があるため）。</p></details>
-    <details><summary>急騰追随</summary><p>BTC・ETH・XRPで、確定した1時間足の上昇が過去30日の標準偏差の2.5倍を超えたら、口座の15%をレバレッジで買い、12時間後に決済。</p></details>
+    <details><summary>GMO 暗号資産トレンド</summary><p>BTC・ETH・XRP の現物を口座の30%まで保有（10/7に55%から縮小、証拠金をコピーへ回すため）（2026/9/26にLTC・BCHを外し主要3銘柄に集中）。4時間足で「14日前より高いか」「30日前より高いか」を30分ごとに判定し、両方+3%超なら保有開始、どちらか−3%未満なら売却、帯内は前回状態を維持（半枠なし）。レバレッジ上乗せは10/6に停止（効果が小さく、コピーと向きが逆になる場面があるため）。</p></details>
+    <details><summary>急騰追随</summary><p>10/30から新規停止（SPIKE_FRACTION=0）。紙上観測のみ。</p></details>
     <details><summary>現物⇄レバレッジ 価格差</summary><p>GMOの現物とレバレッジの価格差を監視。成行側の新規建玉基準は30bp以上（0.30%）。安い方を買い、高い方を売り、差が縮んだら決済します。指値で待つ新規建玉（maker）は停止中です。</p></details>
-    <details><summary>GMO コピー（OKX上位10人）</summary><p>OKXのリーダーのうち、直近の成績が良い上位10人（決済15回以上・活動3日以上・含み損を抱え続けていない人から毎日9:00に選び直し、11/4から）の建玉を5分ごとに集計。BTC・ETH・XRP・SOL・DOGEで銘柄ごとに1人1票、買い＋1・売り−1の差し引き（純票）を出し、「純票 ÷ 8と全銘柄の純票の絶対値の合計の大きい方」の割合で枠を配分して、10/31からその1.5倍をGMOレバレッジで保有します（1銘柄の上限は買い30%・売り50%で、これも1.5倍。合計は枠を超えません）。票の向きが変わっても1時間続くまでは動かず、目標との差が3,000円と目標の半分の大きい方を超えたときだけ売買します。選び直しが2日以上止まると全員の票に戻ります。枠はGMO口座の評価額×1.13（11/2から。それまでは70.8万円＋確定損益）で、利益・損失・入金で伸び縮みします。暗号トレンドがすべて休止中は、証拠金の余力全体まで使えます。維持率145%まで。票が消えれば決済します。</p></details>
-    <details><summary>TQQQ・金の保有（11/3〜）</summary><p>株CFD口座でTQQQを口座の半分（ナスダック100が200日線より上の間だけ）、商品CFD口座で金を全額保有。旧ETF口座のTQQQ・GLDMは9/28に清算済みで、今はCFD口座で同じ考え方の保有を再開しています。</p></details>
+    <details><summary>GMOコピー（停止・最終方式K3）</summary><p>オーナー指示で停止。最終方式は上位10人と全員の純票の符号が逆なら全員を採用。比較表の全員・上位10人は基準モデルであり現在の運用状態ではありません。</p></details>
+    <details><summary>TQQQ・金の保有（11/3〜）</summary><p>11/3から固定票で保有。TQQQ目標は株予算上限106,000円の半分、最大53,000円（ナスダック100が200日線より上の間）。金予算は商品口座評価額の2倍。目標と実保有は別です。旧ETF口座のTQQQ・GLDMは9/28に清算済みで、今はCFD口座で同じ考え方の保有を再開しています。</p></details>
     <details><summary>旧Saxoコピー（OKX上位トレーダー・11/3で売買停止）</summary><p>OKX上位トレーダーの米国株・商品の建玉を5分ごとに集計。銘柄ごとに1人1票、買いを＋1・売りを−1として差し引き、純票数に応じて予算を配分します。分母は純票数の絶対値の合計と4の大きい方で、票が少ないと予算の一部だけを使います。SaxoのCFD（差金決済取引）で追随し、株と商品それぞれの市場時間に発注します。</p></details>
   </section>
   </div>
@@ -441,13 +443,14 @@ header>div{min-width:0} header .btn{padding:8px}
     const max = Math.max(1, ...months.flatMap(m => [m.income || 0, m.expense || 0]));
     const rate = v => v == null ? '算定不可' : `${(v * 100).toFixed(1)}%`;
     const amount = v => v == null ? '算定不可' : v < 0 ? `不足 ${yen(-v)}` : yen(v);
-    el.innerHTML = '<div class="lane-head"><span class="t">家計・直近6か月</span></div>' +
+    el.innerHTML = '<div class="lane-head"><span class="t">家計・入力のある直近6か月</span></div>' +
+      `<div class="note">${esc(h.coverage_note || "入力時点不明")}現在の残高・余力ではありません。</div>` +
       '<div class="legend"><span style="color:var(--c1)">収入</span><span style="color:var(--c2)">支出</span></div>' +
       months.map(m => `<div class="hrow"><span>${esc(m.month)}</span><span>貯蓄率 ${rate(m.savings_rate)}</span></div><div class="bars">` +
         [['収入', m.income, 'c1'], ['支出', m.expense, 'c2']].map(([label, v, color]) =>
           `<div class="bar"><span>${label}</span><div class="track"><div class="fill" style="width:${Math.max(0, (v || 0) / max * 100)}%;background:var(--${color})"></div></div><span>${amount(v)}</span></div>`).join('') + '</div>').join('') +
       '<div class="kv">' + [['定期支出候補／月', amount(h.fixed_cost_monthly_total)], ['サブスク候補', h.subscription_count == null ? '—' : h.subscription_count + '件'],
-        ['投資に回せる額／月', amount(h.investable_monthly)], ['投資に回せる額／今すぐ（生活防衛資金との差）', amount(h.investable_now)], ['生活防衛資金目標', amount(h.emergency_target)]]
+        ['入力時点の投資余力／月', amount(h.investable_monthly)], ['入力時点の投資余力（生活防衛資金との差）', amount(h.investable_now)], ['生活防衛資金目標', amount(h.emergency_target)]]
         .map(([k,v]) => `<span class="k">${k}</span><span class="v">${v}</span>`).join('') + '</div>' +
       `<p class="muted" style="font-size:12px">明細期間 ${esc(h.data_coverage?.first_date || '—')}〜${esc(h.data_coverage?.last_date || '—')}。入力明細のみの概算。当月は途中集計、投資額は連続3〜6完了月から算定。負数は不足額。詳細・確認事項はローカルレポート。</p>`;
   }
@@ -462,7 +465,7 @@ header>div{min-width:0} header .btn{padding:8px}
       <td>${a.key === "live_rule" ? "—" : `${sgn(a.ci90_low)}〜${sgn(a.ci90_high)}`}</td><td>${yen(a.max_dd)}</td></tr>`).join("");
     const fwd = w.days_recorded_forward ?? 0, cps = w.checkpoints_days || [60, 90];
     const per = w.persistence || {};
-    el.innerHTML = `<div class="note" style="margin:0 0 8px">ペーパー比較（実売買ではありません）。追加コスト2bp・予算10万円で、等票（ライブ規則）と重み付けを比べています。区間は日次差の90%範囲で、0をまたぐ間は差と言えません。</div>
+    el.innerHTML = `<div class="note" style="margin:0 0 8px">ペーパー比較（実売買ではありません）。追加コスト2bp・予算10万円で、等票（比較用の基準モデル）と重み付けを比べています。区間は日次差の90%範囲で、0をまたぐ間は差と言えません。</div>
       <div class="hrow"><div>前向き記録日数</div><span class="pill ${fwd >= cps[0] ? "ok" : "warn"}">${fwd}日（診断点 ${cps.join("・")}日）</span></div>
       <div class="hrow"><div>順位の持続性（過去→翌日の順位相関）</div><span class="pill warn">${per.rho == null ? "未算出" : Number(per.rho).toFixed(2)}${per.windows != null ? `・${per.windows}窓` : ""}</span></div>
       ${fwd === 0 ? '<div class="empty">前向きの記録はまだ0日です（2026-10-05開始）。比較表は記録が貯まってから表示します。</div>' : ""}
@@ -490,9 +493,12 @@ header>div{min-width:0} header .btn{padding:8px}
       ${row("累計損益（仮想）", (m) => `<b class="${cls(m.pnl_jpy_total)}">${signed(m.pnl_jpy_total)}</b>`)}
       ${row("1回平均（費用後）", (m) => `<span class="${cls(m.net_bps_mean)}">${bps(m.net_bps_mean)}</span>`)}
       ${row("対照 AI/順/逆", (m) => `<span style="font-size:11px">${bps(m.paired_ai_net_bps)}<br>${bps(m.paired_follow_net_bps)}<br>${bps(m.paired_fade_net_bps)}</span>`)}
+      ${row("最終判断", (m) => jst(m.last_decision_at))}
+      ${row("最終決済", (m) => jst(m.last_close_at))}
+      ${row("活動状態", (m) => m.inactive ? "長期無活動（最終判断から24時間超）" : "直近の記録あり")}
       ${row("24h判断（見送り）", (m) => `${m.calls_24h ?? 0}回（${m.flat_24h ?? 0}）`)}
       </tbody></table></div>
-      <div class="note">ClaudeとCodexに同じ相場データ・同じ指示・同じ規則（2万円/回、同じ手数料）で別々に仮想売買させています。実売買の検討は、どちらも決済100件以上かつ費用後プラスかつ機械ルールより良い場合のみ。更新 ${jst((has(a) ? a : c).summary.generated_at)}。</div>`;
+      <div class="note">ClaudeとCodexに同じ相場データ・同じ指示・同じ規則（2万円/回、同じ手数料）で別々に仮想売買した記録です（集計更新は売買の継続を意味しません）。実売買の検討は、どちらも決済100件以上かつ費用後プラスかつ機械ルールより良い場合のみ。集計更新 ${jst((has(a) ? a : c).summary.generated_at)}。</div>`;
     const d = sel === "codex" ? c : a, name = sel === "codex" ? "Codex" : "Claude";
     live.innerHTML = `<div class="note" style="margin:0 0 6px">${name}の保有中と直近の判断</div>` + ((d.open || []).map((o) => `<div class="hrow"><div>${esc(o.coin)} ${o.side > 0 ? "買い" : "売り"} <span class="muted">${jst(o.at)}・${o.horizon_min}分・損切${o.stop_bps}/利確${o.target_bps}bp</span><div class="sub muted" style="font-size:11px">${esc(o.why)}</div></div><span class="pill warn">保有中</span></div>`).join(""))
       + `<div class="note" style="margin-top:8px">直近の判断</div>` + ((d.decisions || []).slice(-12).reverse().map((x) => `<div class="hrow"><div><span class="muted">${jst(x.at)}・${x.kind === "trigger" ? "急変" : "定時"}</span><div class="sub" style="font-size:11px">${esc(x.why)}</div></div><span class="pill ${x.action === "FLAT" ? "warn" : "ok"}">${x.action === "FLAT" ? "見送り" : esc(x.action) + " " + esc(x.coin)}</span></div>`).join("") || '<div class="empty">まだありません</div>');
@@ -548,6 +554,50 @@ header>div{min-width:0} header .btn{padding:8px}
       `<div class="note">一覧の保存 ${jst(tb.saved_at)}</div>`;
   }
 
+  function laneState(l) {
+    if (l.status === "MANUAL") return ["", "手動・記録のみ"];
+    if (l.status === "STOPPED") return ["warn", "停止"];
+    if (l.status === "IDLE") return ["ok", "待機中"];
+    if (l.status === "BLOCKED") return ["warn", "条件停止"];
+    if (/ERROR|FAIL/.test(l.status || "")) return ["bad", "取得エラー"];
+    if (l.status === "OK") return ["ok", "正常"];
+    return ["warn", "状態不明"];
+  }
+  function renderLaneFreshness(f) {
+    const cards = { laneCrypto: "gmo_crypto_trend", laneSaxo: "saxo_copy", laneCopy: "gmo_copy", laneArb: "gmo_basis_arb",
+      laneNikkei: "saxo_nikkei_fade", laneIndex: "saxo_index_canary", lane200A: "saxo_jp_200a_fade",
+      laneDisc: "owner_discretionary", laneBreakout: "saxo_usdjpy_breakout", laneBreakoutEur: "saxo_eurjpy_breakout" };
+    for (const [id, key] of Object.entries(cards)) {
+      const el = $(id), l = f.lanes?.[key] || {}, st = laneState(l), old = l.stale || ageMin(l.updated_at || l.generated_at) > (key === "gmo_crypto_trend" ? 45 : 15);
+      if (!el) continue;
+      el.querySelector(".lane-freshness")?.remove();
+      el.insertAdjacentHTML("afterbegin", `<div class="lane-freshness note"><span class="pill ${st[0]}">${st[1]}</span> ${esc(l.stop_reason || "")} ${l.execute == null ? "" : l.execute ? "実弾設定" : "紙上設定"}<br>報告 ${jst(l.updated_at || l.generated_at)}${old ? "（古い報告）" : ""}${l.valuation_reason ? " ／ 評価元 " + (l.valuation_at ? jst(l.valuation_at) : "時刻不明") + "・" + esc(l.valuation_reason) : ""}</div>`);
+    }
+  }
+  function render200A(n) {
+    $("lane200A").innerHTML = `<div class="lane-head"><div class="t">Saxo 200A（日経半導体ETF）</div><div class="v ${cls(n.lane_pnl_jpy)}">${signed(n.lane_pnl_jpy)}</div></div>
+      <div class="kv"><div class="k">保有数量</div><div class="v">${n.held == null ? "未取得（直近報告に数量なし）" : number(n.held)}</div>
+      <div class="k">台帳上の保有</div><div class="v">${number(n.recorded_held)}（${jst(n.holdings_at)}）</div>
+      <div class="k">記録済み決済</div><div class="v">${n.closes ?? "—"}件・${signed(n.realized_pnl_jpy)}</div>
+      <div class="k">含み損益</div><div class="v">${signed(n.unrealized_pnl_jpy)}</div></div>
+      <div class="note">${(n.blockers || []).map(b => esc(blockerText(b))).join(" ／ ")}</div>`;
+  }
+  function reviewMarkdown(text) {
+    const inline = (x) => esc(x).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/`([^`]+)`/g, "<code>$1</code>");
+    const lines = String(text).split("\n"), out = [];
+    const cells = (line) => line.trim().replace(/^\||\|$/g, "").split(/(?<!\\)\|/).map(x => inline(x.trim().replace(/\\\|/g, "|")));
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].includes("|") && i + 1 < lines.length && /^\s*\|?\s*:?-{3,}/.test(lines[i + 1])) {
+        const header = cells(lines[i]); i += 2; const rows = [];
+        while (i < lines.length && lines[i].includes("|")) { rows.push(cells(lines[i])); i++; }
+        i--;
+        out.push(`<div style="overflow-x:auto"><table class="variants"><thead><tr>${header.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
+      } else if (/^#{1,6}\s/.test(lines[i])) out.push(`<h3>${inline(lines[i].replace(/^#+\s*/, ""))}</h3>`);
+      else if (lines[i].trim()) out.push(`<p style="overflow-wrap:anywhere">${inline(lines[i])}</p>`);
+    }
+    return out.join("");
+  }
+
   function render() {
     const f = feed, hist = f.equity_history || [];
     const age = ageMin(f.generated_at);
@@ -572,7 +622,7 @@ header>div{min-width:0} header .btn{padding:8px}
       if (id === "dAll" && tot && tot.change_less_confirmed_flows_jpy != null) {
         const d = tot.change_less_confirmed_flows_jpy, base = tot.baseline_jpy + (tot.confirmed_net_deposits_jpy || 0);
         el.className = "v " + cls(d);
-        el.innerHTML = `${signed(d)}<div style="font-size:12px">(${(d / base * 100 >= 0 ? "+" : "") + (d / base * 100).toFixed(1)}%)</div><div class="muted" style="font-size:10px">入金除く・9/26〜</div>`;
+        el.innerHTML = `${signed(d)}<div style="font-size:12px">(${(d / base * 100 >= 0 ? "+" : "") + (d / base * 100).toFixed(1)}%)</div><div class="muted" style="font-size:10px">入出金を除く・${esc(f.capital_changes.since?.slice(0,10) || "不明")}〜<br>簡易損益率・分母 ${yen(base)}（初期額＋純入出金）</div>`;
         return;
       }
       const c = changeSince(hist, h);
@@ -584,10 +634,11 @@ header>div{min-width:0} header .btn{padding:8px}
       const d = c.d - dep, pct = c.base ? d / c.base * 100 : null;
       el.className = "v " + cls(d);
       el.innerHTML = `${signed(d)}${pct == null ? "" : `<div style="font-size:12px">(${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%)</div>`}` +
-        (dep ? `<div class="muted" style="font-size:10px">入金除く</div>` : "");
+        (dep ? `<div class="muted" style="font-size:10px">入出金を除く</div>` : "");
     });
     renderCapitalChanges(f.capital_changes || {});
     renderTax(f.capital_changes || {}, f.tax_realized || {});
+    $("historyWarning").textContent = f.notes?.history_unreconciled || "";
     drawChart(hist);
     drawCalendar();
     drawPnlChart();
@@ -599,15 +650,17 @@ header>div{min-width:0} header .btn{padding:8px}
     renderNikkei(f.lanes.saxo_nikkei_fade || {});
     renderIndex(f.lanes.saxo_index_canary || {});
     renderDisc(f.lanes.owner_discretionary || {});
+    render200A(f.lanes.saxo_jp_200a_fade || {});
     renderBreakout(f.lanes.saxo_usdjpy_breakout || {});
     renderBreakout(f.lanes.saxo_eurjpy_breakout || {}, "laneBreakoutEur");
+    renderLaneFreshness(f);
     renderEfficiency(f.capital_efficiency || {});
     window.__codexTasks = f.codex_tasks || [];
     renderCodex(f.codex_tasks || []);
     renderResearch(f.research, f.codex_tasks || []);
     renderLiveChanges(f.live_changes || []);
     renderExposure(f.exposure);
-    $("dailyReview").innerHTML = f.daily_review?.text ? `<div style="white-space:pre-wrap;font-size:13px">${esc(f.daily_review.text)}</div><div class="note">毎朝7:45にCodexが前日を振り返り（読むだけ・注文や設定の変更はしません）。${esc(jst(f.daily_review.updated_at))} 作成</div>` : '<div class="note">まだありません（毎朝7:45に作成）</div>';
+    $("dailyReview").innerHTML = f.daily_review?.text ? `<div class="review">${reviewMarkdown(f.daily_review.text)}</div><div class="note">毎朝7:45にCodexが前日を振り返り（読むだけ・注文や設定の変更はしません）。${esc(jst(f.daily_review.updated_at))} 作成</div>` : '<div class="note">まだありません（毎朝7:45に作成）</div>';
     renderEvents(f.events || []);
     renderHealth(f);
     renderAiUsage(f.ai_usage);
@@ -633,18 +686,8 @@ header>div{min-width:0} header .btn{padding:8px}
     }
     return { plan: out, floor };
   }
-  function fpReturns(fp) {
-    const dep = new Map(); (fp.deposits || []).forEach((d) => dep.set(d.t, (dep.get(d.t) || 0) + d.jpy));
-    const a = fp.actual || [], days = [], months = new Map();
-    let prev = fp.start_equity_jpy;
-    a.forEach((q, i) => {
-      const flow = dep.get(q.t) || 0, base = i === 0 ? fp.start_equity_jpy : prev;
-      if (i > 0 && base > 0) days.push({ t: q.t, r: (q.jpy - base - flow) / base });
-      const m = q.t.slice(0, 7), e = months.get(m) || { base, flow: 0, last: base };
-      e.flow += i > 0 ? flow : 0; e.last = q.jpy; months.set(m, e); prev = q.jpy;
-    });
-    return { days, months: [...months].map(([m, e]) => ({ t: m, r: e.base > 0 ? (e.last - e.base - e.flow) / e.base : 0 })) };
-  }
+  function fpReturns(fp) { return fp.returns || { days: [], months: [] }; }
+
   function fpBars(svg, rows, need, fmt, label) {
     const W = svg.clientWidth || 340, H = 160, L = 44, R = 8, T = 10, B = 22;
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
@@ -654,7 +697,7 @@ header>div{min-width:0} header .btn{padding:8px}
     let g = "";
     [y0 + (y1 - y0) * 0.1, 0, y1 - (y1 - y0) * 0.1].forEach((v) => { g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${L - 4}" y="${Y(v) + 3}" text-anchor="end" fill="var(--muted)" font-size="9">${fmt(v)}</text>`; });
     rows.forEach((r, i) => { const x = L + i * bw + bw * 0.15, top = Y(Math.max(r.r, 0)), bot = Y(Math.min(r.r, 0));
-      g += `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" height="${Math.max(1, bot - top).toFixed(1)}" fill="var(--${r.r >= need ? "pos" : "neg"})"><title>${esc(r.t)} ${fmt(r.r)}</title></rect>`; });
+      g += `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" height="${Math.max(1, bot - top).toFixed(1)}" fill="var(--${r.r >= need ? "pos" : "neg"})"><title>${esc(r.t)}${r.partial ? "（部分日）" : ""} ${fmt(r.r)}</title></rect>`; });
     g += `<line x1="${L}" x2="${W - R}" y1="${Y(need)}" y2="${Y(need)}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 3"/><text x="${L + 3}" y="${T + 9}" fill="var(--accent)" font-size="10">- - 必要 ${fmt(need)}</text>`;
     const step = Math.ceil(rows.length / 6);
     rows.forEach((r, i) => { if (i % step === 0) g += `<text x="${L + i * bw + bw / 2}" y="${H - 6}" text-anchor="middle" fill="var(--muted)" font-size="9">${esc(r.t.length > 7 ? r.t.slice(5).replace("-", "/") : r.t.slice(2).replace("-", "/"))}</text>`; });
@@ -664,22 +707,22 @@ header>div{min-width:0} header .btn{padding:8px}
     const head = $("fpHead"), svg = $("fpChart"), yrs = $("fpYears");
     if (!fp || !fp.plan_path) { head.innerHTML = '<div class="empty">計画データの初回生成待ちです</div>'; svg.innerHTML = yrs.innerHTML = ""; return; }
     const pct = (v) => v == null ? "—" : (v * 100).toFixed(1) + "%";
-    const rm = Math.pow(1 + fp.required_rate, 1 / 12) - 1, rd = Math.pow(1 + fp.required_rate, 1 / 365) - 1;
-    const gap = fp.current_equity_jpy - fp.planned_now_jpy;
+    const rm = Math.pow(1 + fp.required_rate, 1 / 12) - 1, rd = fp.daily_required_rate;
+    const gap = fp.gap_today_jpy;
     head.innerHTML = `<div class="kv">
       <div class="k">目標</div><div class="v">${yen(fp.target_jpy)}（${esc(fp.end)}まで）</div>
       <div class="k">今の評価額</div><div class="v">${yen(fp.current_equity_jpy)}（目標の${pct(fp.progress)}）</div>
-      <div class="k">計画上の今の目安</div><div class="v">${yen(fp.planned_now_jpy)} <span class="${cls(gap)}">${signed(gap)}</span></div>
+      <div class="k">計画上の今の目安</div><div class="v">${yen(fp.planned_today_jpy)} <span class="${cls(gap)}">${signed(gap)}</span></div>
       <div class="k">計画との差（日数）</div><div class="v ${cls(fp.ahead_days)}">${fp.ahead_days == null ? "—" : Math.abs(fp.ahead_days) < 0.5 ? "計画どおり" : (fp.ahead_days > 0 ? "+" : "−") + Math.round(Math.abs(fp.ahead_days)) + "日" + (fp.ahead_days > 0 ? " 先行" : " 遅れ")}<div class="muted" style="font-size:11px">差額が必要利回りで何日分か（入金も含めた評価額で比較）</div></div>
-      <div class="k">開始からの入金（確認済み）</div><div class="v">${yen(fp.deposits_jpy)} <span class="muted">計画では${yen(fp.planned_deposits_jpy)}</span></div>
+      <div class="k">開始からの純入出金（確認済み）</div><div class="v">${yen(fp.deposits_jpy)} <span class="muted">計画では${yen(fp.planned_deposits_jpy)}</span></div>
       <div class="k">開始からの運用損益</div><div class="v ${cls(fp.gain_jpy)}">${signed(fp.gain_jpy)}（${pct(fp.gain_pct_of_invested)}）</div>
       <div class="k">必要な利回り（税引き後）</div><div class="v">年${pct(fp.required_rate)} ／ 月${(rm * 100).toFixed(2)}% ／ 日${(rd * 100).toFixed(3)}%<div class="muted" style="font-size:11px">今から: 年${pct(fp.required_rate_from_now)}</div></div>
       <div class="k">入金の計画</div><div class="v">毎月${yen(fp.monthly_deposit_jpy)}＋${fp.bonus_months.join("・")}月に${yen(fp.bonus_deposit_jpy)}</div></div>
-      <div class="note">開始 ${esc(fp.start.slice(0, 10))}（評価額${yen(fp.start_equity_jpy)}）。計画書: ${esc(fp.doc)}。運用口座の合計が最高値から30%下がったら入金を止めて原因を確認、毎年11月に見直し（2年続けて目安を下回ったら期間か目標を見直す）。税金は暗号資産が給与と合算で最大55%、Saxoは約20%。日利は暦日（年365日）で換算。</div>`;
+      <div class="note">開始 ${esc(fp.start.slice(0, 10))}（評価額${yen(fp.start_equity_jpy)}）。計画書: ${esc(fp.doc)}。運用口座の合計が最高値から30%下がったら入金を止めて原因を確認、毎年11月に見直し（2年続けて目安を下回ったら期間か目標を見直す）。税金は暗号資産が給与と合算で最大55%、Saxoは約20%。日利は暦日（年365.25日）で換算。複利実績には初日の部分期間も含め、必要複利も同じ経過時間で比較。</div>`;
     document.querySelectorAll("#fpRange button").forEach((b) => { b.classList.toggle("on", Number(b.dataset.r) === fpRange);
       b.onclick = () => { fpRange = Number(b.dataset.r); try { localStorage.setItem("obs.fpRange2", fpRange); } catch (e) {} renderFire(fp); }; });
     const t0 = Date.parse(fp.start), tEnd = fpRange ? t0 + fpRange * DAY : Date.parse(fp.end);
-    const actual = (fp.actual || []).map((q) => [Date.parse(q.t + "T15:00:00+09:00"), q.jpy]).filter((p) => p[0] <= tEnd + DAY);
+    const actual = (fp.actual || []).map((q) => [Date.parse(q.at), q.jpy]).filter((p) => p[0] <= tEnd + DAY);
     let plan, floor;
     if (fpRange && fpRange <= 400) ({ plan, floor } = fpDailyPlan(fp, t0, tEnd));
     else { const inR = (q) => Date.parse(q.t) <= tEnd + 31 * DAY;
@@ -704,10 +747,9 @@ header>div{min-width:0} header .btn{padding:8px}
     if (last) g += `<circle cx="${X(last[0])}" cy="${Y(last[1])}" r="3.5" fill="var(--k-copy)"/>`;
     svg.innerHTML = g;
     const ret = fpReturns(fp), dys = ret.days.slice(-60), mos = ret.months;
-    const comp = (rs) => rs.reduce((a, x) => a * (1 + x.r), 1) - 1;
     const p2 = (v) => (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(2) + "%", p3 = (v) => (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(3) + "%";
-    $("fpDayHead").innerHTML = ret.days.length ? `<div class="kv"><div class="k">必要な日利以上の日</div><div class="v">${ret.days.filter((x) => x.r >= rd).length} / ${ret.days.length}日</div>
-      <div class="k">開始からの複利（実績 / 必要）</div><div class="v"><span class="${cls(comp(ret.days) - (Math.pow(1 + rd, ret.days.length) - 1))}">${p2(comp(ret.days))}</span> / ${p2(Math.pow(1 + rd, ret.days.length) - 1)}</div></div>` : "";
+    $("fpDayHead").innerHTML = ret.days.length ? `<div class="kv"><div class="k">必要な日利以上の完了日（初日・当日の部分日を除外）</div><div class="v">${fp.complete_days_meeting_goal} / ${fp.complete_days}日</div>
+      <div class="k">開始からの複利（実績 / 必要）</div><div class="v"><span class="${cls(fp.compound_return - fp.compound_required_return)}">${p2(fp.compound_return)}</span> / ${p2(fp.compound_required_return)}</div></div>` : "";
     fpBars($("fpDayChart"), dys, rd, p3, "日");
     $("fpMonHead").innerHTML = mos.length ? `<div class="kv"><div class="k">必要な月利以上の月</div><div class="v">${mos.filter((x) => x.r >= rm).length} / ${mos.length}か月（今月は途中）</div></div>` : "";
     fpBars($("fpMonChart"), mos, rm, p2, "か月");
@@ -718,49 +760,9 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   let calMonth = null, calMode = "day", calSel = null, calLane = "all";
-  const CAL_LANES = [["all", "全体"], ["copy", "GMOコピー"], ["arb", "価格差"], ["trend", "暗号トレンド"], ["gap", "GMO差"], ["saxo", "TQQQ・金"], ["nikkei", "Saxo日経"], ["index", "Saxo夜指数"], ["fx", "Saxo仲値"], ["brk", "Saxoブレイク"], ["a200", "Saxo 200A"], ["disc", "裁量枠"]];
+  const CAL_LANES = [["all", "全体"], ["copy", "GMOコピー"], ["arb", "価格差"], ["trend", "暗号トレンド"], ["gap", "GMO差"], ["saxo", "TQQQ・金"], ["legacy", "旧Saxoコピー"], ["saxo_gap", "Saxo未配賦差"], ["nikkei", "Saxo日経"], ["index", "Saxo夜指数"], ["fx", "Saxo仲値"], ["brk", "Saxoブレイク"], ["a200", "Saxo 200A"], ["disc", "裁量枠"]];
   const dayKey = (t) => new Date(t).toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
-  function dailyPnl(f) {
-    const hist = f.equity_history || [], flows = f.capital_changes?.events || [];
-    const eod = new Map();
-    hist.forEach((h) => eod.set(dayKey(h.t), h));
-    const dep = {};
-    flows.forEach((e) => {
-      const d = e.at ? dayKey(e.at) : e.date_jst, o = (dep[d] ||= { total: 0, gmo: 0, saxo: 0 });
-      o.total += e.amount_jpy || 0; o[e.account === "saxo" ? "saxo" : "gmo"] += e.amount_jpy || 0;
-    });
-    const out = {}; let prev = hist[0], cum = 0;
-    [...eod.keys()].sort().forEach((d, i) => {
-      const cur = eod.get(d), dp = dep[d] || { total: 0, gmo: 0, saxo: 0 };
-      const diff = (a, b, x) => a == null || b == null ? null : a - b - x;
-      const total = diff(cur.total, prev.total, dp.total);
-      cum += total || 0;
-      out[d] = { total, gmo: diff(cur.gmo_crypto, prev.gmo_crypto, dp.gmo), saxo: diff(cur.saxo, prev.saxo, dp.saxo),
-                 dep: dp.total, cum, partial: i === 0 };
-      prev = cur;
-    });
-    const src = { copy: "gmo_copy", arb: "gmo_basis_arb", gmo: "gmo_crypto_trend", saxo: "saxo_copy", saxoetf: "saxo_etf_trend", nikkei: "saxo_nikkei_fade", index: "saxo_index_canary", fx: "saxo_usdjpy_fix", brk: "saxo_usdjpy_breakout", a200: "saxo_jp_200a_fade", disc: "owner_discretionary", tm: "gmo_trend_measured" }, lastOf = {}, lp = {}, lc = {};
-    for (const [k, key] of Object.entries(src)) {
-      lastOf[k] = new Map();
-      (f.lane_pnl?.[key]?.points || []).filter((q) => Number.isFinite(q.pnl_jpy)).sort((a, b) => Date.parse(a.t) - Date.parse(b.t))
-        .forEach((q) => lastOf[k].set(dayKey(q.t), q.pnl_jpy));
-      lp[k] = 0; lc[k] = 0;
-    }
-    Object.keys(out).sort().forEach((d) => {
-      const dl = {};
-      for (const k of Object.keys(src)) {
-        const v = lastOf[k].has(d) ? lastOf[k].get(d) : lp[k];
-        dl[k] = v - lp[k]; lp[k] = v;
-      }
-      // Trend = the allocator's own measured line; the rest of the GMO account change (copy unrealised sampled at a
-      // different minute, fee estimates vs actual) is shown as its own "GMO差" so it is not mistaken for trend PnL.
-      dl.trend = dl.tm; dl.gap = dl.gmo - dl.copy - dl.arb - dl.tm;
-      const l = { all: out[d].total, copy: dl.copy, arb: dl.arb, trend: dl.trend, gap: dl.gap, saxo: dl.saxo + dl.saxoetf, nikkei: dl.nikkei, index: dl.index, fx: dl.fx, brk: dl.brk, a200: dl.a200, disc: dl.disc }, c = {};
-      for (const k of Object.keys(l)) { lc[k] = (lc[k] || 0) + (l[k] || 0); c[k] = lc[k]; }
-      out[d].lane = l; out[d].lcum = c;
-    });
-    return out;
-  }
+  function dailyPnl(f) { return f.daily_pnl || {}; }
   function shortYen(v) {
     if (v == null) return "";
     const a = Math.abs(Math.round(v)), sg = v < 0 ? "−" : "+";
@@ -805,7 +807,7 @@ header>div{min-width:0} header .btn{padding:8px}
     $("calGrid").innerHTML = g;
     const sel = calSel && days[calSel];
     const rows = !sel ? [] : [["合計", sel.total], ["GMO口座", sel.gmo], ["Saxo口座", sel.saxo], ["累計（記録開始から）", sel.cum],
-      ...CAL_LANES.filter(([k]) => k !== "all").map(([k, n]) => ["・" + n, sel.lane[k]]), ...(sel.dep ? [["この日の入金（除外済み）", sel.dep]] : [])];
+      ...CAL_LANES.filter(([k]) => k !== "all").map(([k, n]) => ["・" + n, sel.lane[k]]), ...(sel.dep ? [["この日の純入出金（除外済み）", sel.dep]] : [])];
     const ttl = !sel ? "" : `${calSel.slice(5).replace("-", "/")}${calSel === today ? "（今日・途中）" : sel.partial ? "（記録開始日・途中から）" : ""}`;
     $("calDetail").innerHTML = !sel ? '<div class="note" style="grid-column:1/-1">日付をタップすると内訳が出ます</div>' :
       `<div class="k" style="grid-column:1/-1;font-weight:700;color:var(--text);margin-top:8px">${ttl}</div>` +
@@ -815,17 +817,18 @@ header>div{min-width:0} header .btn{padding:8px}
   const TAX = { crypto: 0.3042, saxo: 0.20315 };
   function renderTax(c, tr) {
     const acc = c.accounts || {};
+    const latestYear = Object.keys(tr.years || {}).sort().at(-1), realized = tr.years?.[latestYear] || {};
     const rows = [["GMO 暗号資産", "gmo_crypto", TAX.crypto, "雑所得（総合課税）。所得税20.42%＋住民税10%＝約30.4%と仮定"],
                   ["Saxo", "saxo", TAX.saxo, "申告分離課税 20.315%（株・ETF・CFD）"]];
     let sum = 0, tot = 0, gain = 0;
     const body = rows.map(([label, k, rate, basis]) => {
-      const pnl = acc[k]?.change_less_confirmed_flows_jpy, ok = typeof pnl === "number";
+      const pnl = realized[k === "gmo_crypto" ? "crypto" : "saxo"]?.net_jpy, ok = typeof pnl === "number";
       const tax = ok ? Math.max(0, pnl) * rate : null;
       if (ok) { sum += pnl; tot += tax; gain += Math.max(0, pnl); }
       return `<tr><td>${label}<div class="note">${basis}</div></td><td align="right" class="${cls(pnl)}">${signed(pnl)}</td><td align="right">${(rate * 100).toFixed(1)}%</td><td align="right">${yen(tax)}</td></tr>`;
     }).join("");
     const years = Object.keys(tr.years || {}).sort().reverse();
-    const q = (x) => x === "exact" ? "確定値" : "推計";
+    const q = (x) => x === "recorded" || x === "exact" ? "記録済み値・要照合" : "推計";
     const rtax = (k, net) => Math.max(0, net) * (k === "crypto" ? TAX.crypto : TAX.saxo);
     const yearHtml = years.map((y) => {
       const by = tr.years[y]; let yt = 0;
@@ -837,13 +840,13 @@ header>div{min-width:0} header .btn{padding:8px}
       return `<h3 style="margin:14px 0 4px">${esc(y)}年（1/1〜12/31 JST）　概算税額 ${yen(yt)}</h3><div style="overflow-x:auto"><table class="variants" style="margin-top:0"><thead><tr><th align="left">レーン</th><th align="right">損益</th><th align="right">手数料</th><th align="right">確定損益</th></tr></thead><tbody>${blocks}</tbody></table></div>`;
     }).join("");
     const realizedHtml = `<h2 style="margin-top:22px">確定損益の年間集計</h2>${yearHtml || '<div class="note">集計できるデータがまだありません。</div>'}
-      <div class="note">GMOコピーは取引所の決済損益と手数料の実額です。価格差・現物トレンドは台帳の推計値、Saxoは「残高増減−入金−含み損益」による推計で、約定ごとの確定損益ではありません。</div>
-      <div class="note">台帳に載らないもの：ロールオーバー・資金調達費用、台帳外の手数料・スプレッド。口座の増減（GMO ${signed(tr.gmo_account_change_jpy)} ／ Saxo ${signed(tr.saxo_account_change_jpy)}）との差は、含み損益とこれらです。申告には取引所の年間取引報告書を使ってください。</div>`;
+      <div class="note">GMOコピーは台帳に記録された決済損益と売買料のみ（${esc(tr.copy_reconciliation?.unreconciled_day || "日付不明")}の未照合${tr.copy_reconciliation?.unreconciled_count ?? "不明"}件・全期間の消失記録${tr.copy_reconciliation?.gone_records_total ?? "不明"}件）。裁量の暫定手動損失を含み、年間報告書との照合前です。価格差・現物トレンドは台帳の推計値、Saxoは「残高増減−確認済み純入出金−全所有者の含み損益」による推計で、約定ごとの確定損益ではありません。</div>
+      <div class="note">GMOコピーの推定保有料は控除済み。他の未記録費用・未照合取引は含まれません。口座の増減（GMO ${signed(tr.gmo_account_change_jpy)} ／ Saxo ${signed(tr.saxo_account_change_jpy)}）との差は、含み損益・未照合差等を含み、全額の帰属は未確定です。申告には取引所の年間取引報告書を使ってください。</div>`;
     $("taxCard").innerHTML = `<div style="overflow-x:auto"><table class="variants" style="margin-top:0">
-      <thead><tr><th align="left">口座</th><th align="right">損益（入金控除後）</th><th align="right">税率</th><th align="right">概算税額</th></tr></thead>
+      <thead><tr><th align="left">口座</th><th align="right">記録済み確定損益（${esc(latestYear || "不明")}年）</th><th align="right">税率</th><th align="right">概算税額</th></tr></thead>
       <tbody>${body}<tr><td><b>合計</b></td><td align="right" class="${cls(sum)}">${signed(sum)}</td><td></td><td align="right"><b>${yen(tot)}</b></td></tr></tbody></table></div>
       <div class="kv" style="margin-top:12px"><div class="k">納税積立の目安（利益が出た口座の利益の20〜30%）</div><div class="v">${yen(gain * 0.2)}〜${yen(gain * 0.3)}</div></div>
-      <div class="note">損益は「資産の増減−確認済み入金」で、含み益を含みます。税がかかるのは決済・売却で確定した分だけなので、実際の税額はこれより小さくなる場合があります。</div>
+      <div class="note">上表は下記の年間確定損益集計に基づく参考額です。未決済の含み損益を含めません。Saxoは残高差による推計で、完全な約定照合済み額ではありません。</div>
       <div class="note">暗号資産（雑所得）と株・CFD（申告分離）の損益は通算できません。片方の損失でもう片方の利益は減らせません。損失の繰越しも種類で異なります。</div>
       <div class="note">給与所得者は、副業の所得合計が年20万円以下なら所得税の確定申告は不要です（住民税の申告は別）。</div>
       <div class="note">概算です。税率はあなたの所得区分（課税所得330〜695万円）からの仮定です。申告前に税理士か国税庁の情報で確認してください。</div>${realizedHtml}`;
@@ -851,10 +854,10 @@ header>div{min-width:0} header .btn{padding:8px}
 
   function renderCapitalChanges(c) {
     const a = c.accounts?.total || {}, saxo = c.accounts?.saxo || {};
-    $("capitalChanges").innerHTML = `<div class="kv"><div class="k">確認済み純入金</div><div class="v">${yen(a.confirmed_net_deposits_jpy)}</div>
-      <div class="k">入金控除後の増減（暫定）</div><div class="v">${signed(a.change_less_confirmed_flows_jpy)}</div></div>
+    $("capitalChanges").innerHTML = `<div class="kv"><div class="k">確認済み純入出金</div><div class="v">${yen(a.confirmed_net_deposits_jpy)}</div>
+      <div class="k">確認済み純入出金を調整後の増減（暫定）</div><div class="v">${signed(a.change_less_confirmed_flows_jpy)}</div></div>
       <div class="note">${(c.events || []).map((e) => `${esc(e.date_jst)} ${e.account === "saxo" ? "Saxo" : "GMO"} ${e.amount_jpy >= 0 ? "入金" : "出金"} ${yen(Math.abs(e.amount_jpy))}（本人確認）`).join(" ／ ") || "入出金明細未照合"}。${esc(c.note || "入出金未照合のため運用損益は未算定です。")}</div>
-      <div class="note">Saxo全体：残高増減 ${signed(saxo.equity_change_jpy)} − 確認済み純入金 ${yen(saxo.confirmed_net_deposits_jpy)} ＝ ${signed(saxo.change_less_confirmed_flows_jpy)}（暫定・${jst(c.since)}から）</div>`;
+      <div class="note">Saxo全体：残高増減 ${signed(saxo.equity_change_jpy)} − 確認済み純入出金 ${yen(saxo.confirmed_net_deposits_jpy)} ＝ ${signed(saxo.change_less_confirmed_flows_jpy)}（暫定・${jst(c.since)}から）</div>`;
   }
 
   function drawChart(hist) {
@@ -895,20 +898,25 @@ header>div{min-width:0} header .btn{padding:8px}
       cur.setAttribute("x1", px); cur.setAttribute("x2", px); cur.setAttribute("visibility", "visible");
       tip.style.display = "block"; tip.style.left = (px * rect.width / W) + "px"; tip.style.top = (Y(h.total) * rect.height / H) + "px";
       tip.innerHTML = `${jst(h.t)}<br><b>${yen(h.total)}</b> <span class="muted">GMO ${yen(h.gmo_crypto)} / Saxo ${yen(h.saxo)}</span>`;
+      const box = tip.getBoundingClientRect(), parent = tip.offsetParent.getBoundingClientRect();
+      const half = box.width / 2, left = Math.max(8, parent.left), right = Math.min(window.innerWidth - 8, parent.right);
+      const center = Math.max(left + half, Math.min(right - half, rect.left + px * rect.width / W));
+      tip.style.left = (center - parent.left) + "px";
     };
     const hide = () => { tip.style.display = "none"; cur.setAttribute("visibility", "hidden"); };
     svg.onmousemove = move; svg.ontouchstart = move; svg.ontouchmove = move; svg.onmouseleave = hide; svg.ontouchend = hide;
   }
 
   const PNL_LANES = [
-    ["total_all", "全体（GMO＋Saxo・入金除く）", "var(--text)"],
+    ["total_all", "全体（GMO＋Saxo・入出金を除く）", "var(--text)"],
     ["gmo_copy", "GMOコピー", "var(--k-copy)"], ["gmo_basis_arb", "価格差", "var(--k-arb)"],
-    ["saxo_copy", "旧Saxoコピー（11/3まで）", "var(--k-saxo)"], ["saxo_etf_trend", "TQQQ・金の保有（11/3〜）", "var(--accent)"], ["saxo_nikkei_fade", "Saxo日経（確定＋含み）", "var(--k-nikkei)"],
+    ["saxo_copy_legacy", "旧Saxoコピー（11/3まで）", "var(--k-saxo)"], ["saxo_copy", "TQQQ・金の保有（11/3〜）", "var(--accent)"], ["saxo_nikkei_fade", "Saxo日経（確定＋含み）", "var(--k-nikkei)"],
     ["saxo_usdjpy_fix", "Saxo仲値（確定＋含み）", "var(--k-fx)"], ["saxo_index_canary", "Saxo夜指数（確定＋含み）", "var(--k-trend2)"], ["saxo_usdjpy_breakout", "Saxoブレイク（確定＋含み）", "var(--k-fx)"], ["saxo_jp_200a_fade", "Saxo 200A（確定＋含み・11/13〜）", "var(--k-nikkei)"], ["owner_discretionary", "裁量・例外枠（手動）", "var(--k-trend2)"],
+    ["gmo_unallocated", "GMO未配賦差", "var(--muted)"], ["saxo_unallocated", "Saxo未配賦差", "var(--warn)"],
     ["gmo_trend_only", "トレンド主体（推定）", "var(--k-trend)"], ["gmo_trend_measured", "トレンド実測（10/7〜）", "var(--k-trend2)"],
     ["gmo_crypto_trend", "GMO口座全体（トレンド含む）", "var(--k-gmo)"],
   ];
-  const PNL_DEFAULT = ["total_all", "gmo_copy", "gmo_basis_arb", "saxo_copy", "saxo_etf_trend", "saxo_nikkei_fade", "saxo_usdjpy_fix", "saxo_index_canary", "saxo_usdjpy_breakout", "saxo_jp_200a_fade", "owner_discretionary", "gmo_trend_measured"];
+  const PNL_DEFAULT = ["total_all", "gmo_copy", "gmo_basis_arb", "saxo_copy_legacy", "saxo_copy", "gmo_unallocated", "saxo_unallocated", "saxo_nikkei_fade", "saxo_usdjpy_fix", "saxo_index_canary", "saxo_usdjpy_breakout", "saxo_jp_200a_fade", "owner_discretionary", "gmo_trend_measured"];
   function pnlShown() {
     try {
       const v = JSON.parse(localStorage.getItem("pnlShown")), known = JSON.parse(localStorage.getItem("pnlKnown") || "null");
@@ -975,25 +983,15 @@ header>div{min-width:0} header .btn{padding:8px}
   // not recovered for weeks is missed by "max drawdown" alone. Computed on each lane's full cumulative-PnL record (JPY),
   // not on the chart range; an unrecovered drawdown is shown as continuing to the latest record, not as recovered.
   const DD_SKIP = new Set(["gmo_trend_only", "gmo_crypto_trend"]);  // estimated lines with 30-min account spikes
-  function ddStats(pts) {
-    let peak = -Infinity, peakT = null, maxDd = 0, longest = 0;
-    for (const p of pts) {
-      if (p.v >= peak) { if (peakT != null) longest = Math.max(longest, p.t - peakT); peak = p.v; peakT = p.t; }
-      maxDd = Math.max(maxDd, peak - p.v);
-    }
-    const last = pts.at(-1), cur = peak - last.v, under = cur > 0 ? last.t - peakT : 0;
-    return { cur, maxDd, under, longest: Math.max(longest, under) };
-  }
   function renderDrawdowns(series) {
     const day = 86400e3, d = (ms) => ms < day ? "1日未満" : `${Math.round(ms / day)}日`;
     const rows = series.filter((s) => !DD_SKIP.has(s.key)).map((s) => {
-      const pts = (feed.lane_pnl?.[s.key]?.points || []).filter((p) => Number.isFinite(p.pnl_jpy) && Number.isFinite(Date.parse(p.t)))
-        .map((p) => ({ t: Date.parse(p.t), v: p.pnl_jpy })).sort((a, b) => a.t - b.t);
-      return pts.length >= 2 ? { name: s.name, ...ddStats(pts) } : null;
+      const stats = feed.lane_pnl?.[s.key]?.drawdown;
+      return stats ? { name: s.name, ...stats } : null;
     }).filter(Boolean);
     $("ddTable").innerHTML = rows.length ? `<div style="overflow-x:auto"><table class="variants" aria-label="下落の深さと長さ"><thead><tr><th>戦略</th><th>いまの下落</th><th>未回復</th><th>最大の下落</th><th>最長の未回復</th></tr></thead><tbody>${
       rows.map((r) => `<tr><td>${esc(r.name)}</td><td class="${r.cur > 0 ? "neg" : ""}">${r.cur > 0 ? signed(-r.cur) : "高値更新中"}</td><td>${r.cur > 0 ? d(r.under) : "—"}</td><td>${r.maxDd > 0 ? signed(-r.maxDd) : "なし"}</td><td>${r.longest > 0 ? d(r.longest) : "—"}</td></tr>`).join("")}</tbody></table></div>
-      <div class="note">いまの下落＝これまでの最高値からの差。未回復＝最高値をつけてから戻っていない日数（記録の最後まで続いている場合はそこまで）。長く戻らない戦略は、損失額が小さくても見直し候補です。</div>` : '<div class="empty">データなし</div>';
+      <div class="note">描画用に間引く前の全保存点で集計。いまの下落＝これまでの最高値からの差。未回復＝最高値をつけてから戻っていない日数（記録の最後まで続いている場合はそこまで）。長く戻らない戦略は、損失額が小さくても見直し候補です。</div>` : '<div class="empty">データなし</div>';
   }
 
   function renderVariants() {
@@ -1002,11 +1000,11 @@ header>div{min-width:0} header .btn{padding:8px}
       min_denom_4: "分母下限4", min_denom_16: "分母下限16", inverse: "逆方向", no_rebalance_band: "調整幅なし" };
     const hours = report.coverage?.hours;
     const rows = Object.entries(variants).map(([name, v]) => `<tr><td>${esc(names[name] || "比較案")}</td><td class="${cls(v.total_pnl_jpy)}">${signed(v.total_pnl_jpy)}</td><td>${v.trades == null ? "—" : esc(v.trades)}</td><td>${yen(v.max_drawdown_jpy)}</td><td>${Number.isFinite(hours) ? hours.toFixed(1) + "h" : "—"}</td></tr>`).join("");
-    return `<div id="copyVariants"><div class="note">ペーパーリプレイ比較（実売買の実績ではありません）。旧エンジン条件：全員の票・調整幅25%・倍率1。今の実弾（上位10人・調整幅50%・倍率1.5）と同じ条件の比較ではありません。</div>${rows ? `<table class="variants" aria-label="コピー戦略のペーパー比較"><thead><tr><th>比較案</th><th>損益</th><th>取引数</th><th>最大DD</th><th>データ時間</th></tr></thead><tbody>${rows}</tbody></table><div class="note">共通予算 ${yen(report.method?.budget_jpy)} ・ データ ${jst(report.coverage?.start)}〜${jst(report.coverage?.end)}</div>` : '<div class="empty">比較データはまだありません</div>'}</div>`;
+    return `<div id="copyVariants"><div class="note">ペーパーリプレイ比較（実売買の実績ではありません）。旧エンジン条件：全員の票・調整幅25%・倍率1。停止直前の方式（K3・調整幅50%・倍率1.5）と同じ条件の比較ではありません。</div>${rows ? `<table class="variants" aria-label="コピー戦略のペーパー比較"><thead><tr><th>比較案</th><th>損益</th><th>取引数</th><th>最大DD</th><th>データ時間</th></tr></thead><tbody>${rows}</tbody></table><div class="note">共通予算 ${yen(report.method?.budget_jpy)} ・ データ ${jst(report.coverage?.start)}〜${jst(report.coverage?.end)}</div>` : '<div class="empty">比較データはまだありません</div>'}</div>`;
   }
 
   function laneDelta(key) {
-    // GMO has had no deposits/withdrawals since the record started, so its equity change is its PnL.
+    // Account PnL removes confirmed deposits and withdrawals; percentage uses the named baseline.
     // The Saxo ETF account now only holds cash that is being moved to the CFD accounts: no PnL line.
     const acc = (feed.capital_changes?.accounts || {})[key === "gmo_crypto" ? "gmo_crypto" : "__none"];
     if (!acc || !Number.isFinite(acc.equity_change_jpy)) {
@@ -1014,7 +1012,7 @@ header>div{min-width:0} header .btn{padding:8px}
     }
     const v = acc.equity_change_jpy - (acc.confirmed_net_deposits_jpy || 0);
     const pct = acc.baseline_jpy ? ` (${(v / acc.baseline_jpy * 100).toFixed(1)}%)` : "";
-    return `<div class="sub ${cls(v)}" style="text-align:right;font-size:12px">記録開始から ${signed(v)}${pct}</div>`;
+    return `<div class="sub ${cls(v)}" style="text-align:right;font-size:12px">記録開始から ${signed(v)}${pct}<br>簡易損益率・分母は初期額 ${yen(acc.baseline_jpy)}</div>`;
   }
   const arrow = (v) => v === 1 ? '<span class="pos">▲</span>' : v === 0.5 ? '<span class="warn">▶</span>' : '<span class="neg">▼</span>';
   const sum = (o) => Object.values(o || {}).reduce((a, b) => a + (b || 0), 0);
@@ -1026,13 +1024,13 @@ header>div{min-width:0} header .btn{padding:8px}
       <div class="lane-head"><div class="t">GMO 暗号口座・トレンド</div><div class="v">${yen(c.equity_jpy)}</div></div>${laneDelta("gmo_crypto")}
       <div class="chips">${Object.entries(c.trend_scores || {}).map(([k, v]) => `<span class="chip">${esc(k)} ${arrow(v)}</span>`).join("") || '<span class="muted">—</span>'}</div>
       <div class="kv">
-        <div class="k">現物</div><div class="v">${yen(sum(c.spot_jpy))}</div>
-        <div class="k">レバレッジ上乗せ</div><div class="v">${yen(sum(c.overlay_jpy))}</div>
-        <div class="k">急騰追随</div><div class="v">${yen(sum(c.spike_jpy))}</div>
+        <div class="k">現物</div><div class="v">${yen(c.spot_jpy == null ? null : sum(c.spot_jpy))}</div>
+        <div class="k">レバレッジ上乗せ</div><div class="v">${yen(c.overlay_jpy == null ? null : sum(c.overlay_jpy))}</div>
+        <div class="k">急騰追随</div><div class="v">${yen(c.spike_jpy == null ? null : sum(c.spike_jpy))}</div>
         <div class="k">証拠金維持率</div><div class="v" style="color:${mrColor}">${mr ? Math.round(mr * 100) + "%" : "—"}</div>
       </div>
       <div class="gauge"><div style="width:${mrPct * 100}%;background:${mrColor}"></div></div>
-      <div class="note">▲両トレンド上向き ▶片方のみ ▼下向き（売却）</div>`;
+      <div class="note">3%帯の状態保持：両方+3%超で入る／どちらか−3%未満で出る／帯内は前回状態を維持。半枠なし。急騰追随の新規は停止・紙上観測。</div>`;
   }
 
   function renderSaxo(s, k) {
@@ -1055,7 +1053,7 @@ header>div{min-width:0} header .btn{padding:8px}
   // Owner 2026-11-04: the CFD sleeve's TQQQ + gold hold (since 11/3 12:00 JST) is the Saxo ETF lane resumed.
   function renderCoreHold(s, k) {
     const on = s.nasdaq_above_sma200, label = (sym) => /^TQQQ/.test(sym) ? "TQQQ（ナスダック3倍）" : /^(GOLD|XAU)/.test(sym) ? "金" : sym;
-    const pts = (feed?.lane_pnl?.saxo_etf_trend?.points || []).filter((q) => Number.isFinite(q.pnl_jpy)),
+    const pts = (feed?.lane_pnl?.saxo_copy?.points || []).filter((q) => Number.isFinite(q.pnl_jpy)),
       pnl = pts.length ? pts[pts.length - 1].pnl_jpy : null;
     const rows = (k.positions || []).map((p) => `<div class="k">${esc(label(p.symbol || "UIC_" + p.uic))}</div>
       <div class="v">${number(p.amount)} <span class="${cls(p.unrealized_pnl_jpy)}" style="font-size:11px">含み ${signed(p.unrealized_pnl_jpy)}</span></div>`).join("");
@@ -1064,8 +1062,8 @@ header>div{min-width:0} header .btn{padding:8px}
       <div class="chips"><span class="pill ok">11/3再開・CFD口座で保有</span>
         <span class="chip">ナスダック 200日線 ${on === true ? '<span class="pos">上 ▲</span>' : on === false ? '<span class="neg">下 ▼</span>' : "—"}</span></div>
       <div class="kv">${rows || '<div class="k">保有</div><div class="v muted">なし</div>'}
-        <div class="k">目標配分</div><div class="v">TQQQ 半分／金 全額</div></div>
-      <div class="note">右上の金額は11/3 12:00の切り替え時点からの損益（株・商品CFD口座の決済＋含み損益）。TQQQは株口座の半分（ナスダックが200日線より上の間のみ）、金は商品口座の全額。200日線を下回るとTQQQを売却し、金だけ残します。発注は米国市場時間のみ。旧ETF口座は使っていません。</div>`;
+        <div class="k">目標配分</div><div class="v">TQQQ 目標 ${yen(k.targets_jpy?.TQQQ)}／金 目標 ${yen(k.targets_jpy?.XAU)}</div></div>
+      <div class="note">右上の金額は11/3 12:00の切り替え時点からの損益（株・商品CFD口座の決済＋含み損益）。TQQQは株予算の上限${yen(k.rules?.STOCK_BUDGET_CAP_JPY)}の半分（最大53,000円・200日線より上の間のみ）。金の予算は商品口座評価額の${number(k.rules?.LEVERAGE)}倍。目標と実保有は別で、目標0でも未決済の保有を上に表示します。発注は米国市場時間のみ。旧ETF口座は使っていません。</div>`;
   }
 
   function shadowHold(w) {
@@ -1093,22 +1091,16 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   function renderCopy(k) {
-    const votes = k.votes || {}, tg = k.targets_jpy || {}, pos = k.positions || {}, bn = k.binance_votes || {};
-    const coins = Object.keys(votes);
-    const rows = coins.map((c) => {
-      const v = votes[c] || 0, p = pos[c];
-      const held = p ? `${p.side === "BUY" ? '<span class="pos">買</span>' : '<span class="neg">売</span>'} ${p.qty}` : '<span class="muted">なし</span>';
-      return `<div class="k">${esc(c)} <span class="muted" style="font-size:11px">票 ${v > 0 ? "+" : ""}${v}${bn[c] ? `（Binance ${bn[c] > 0 ? "+" : ""}${bn[c]}）` : ""}</span></div><div class="v">${held} <span class="muted" style="font-size:11px">目標 ${yen(tg[c] || 0)}</span></div>`;
-    }).join("");
-    const closes = (feed.events || []).filter((e) => e.lane === "gmo_copy" && e.leg === "CLOSE" && e.accepted);
-    const fee = (k.leverage_fee_est_jpy || 0) + (k.trading_fee_jpy || 0), pnl = (k.realized_pnl_jpy ?? closes.reduce((t, e) => t + (e.realized_pnl_jpy || 0), 0)) - fee;
-    const lf = k.leader_filter || {}, top = lf.mode && lf.mode !== "all";
-    $("laneCopy").innerHTML = `
-      <div class="lane-head"><div class="t">GMO コピー（${top ? "OKX上位" + (lf.leaders || 10) + "人" : "OKX・Binance上位トレーダー"}）</div><div class="v ${cls(pnl + (k.unrealized_pnl_jpy ?? 0))}" style="font-size:15px">${signed(pnl + (k.unrealized_pnl_jpy ?? 0))}</div></div>
-      <div class="kv"><div class="k">損益の内訳（確定＋含み、確定は売買手数料${yen(k.trading_fee_jpy || 0)}とレバレッジ手数料の推定${yen(k.leverage_fee_est_jpy || 0)}を控除後）</div><div class="v">${signed(pnl)} ＋ ${Number.isFinite(k.unrealized_pnl_jpy) ? signed(k.unrealized_pnl_jpy) : "含み 計測前"}</div>
-      <div class="k">使える枠（上限 ${yen(k.cap_jpy)}＝GMO口座の評価額×1.13で、利益・損失・入金で伸び縮み。トレンド休止中は証拠金の余力全体、10/31から目標は一律1.5倍）</div><div class="v">${yen(k.budget_jpy)}</div>
-      <div class="k">票を数える人</div><div class="v">${top ? `成績上位${lf.leaders || 10}人（${lf.selection_cutoff ? esc(jst(lf.selection_cutoff)) + "選出" : "毎日9:00選出"}）` : "全員"}</div>${rows}</div>
-      <div class="note">${top ? "11/4から、OKXのリーダーのうち直近の成績が良い上位10人（毎日9:00に選び直し）の建玉だけを5分ごとに集計し、" : "OKXの上位トレーダーに加え、10/20からBinanceの上位トレーダーの新規建玉も5分ごとに集計し（Binanceの収集が止まったときはOKXのみ）、"}銘柄ごとに1人1票の差し引き（純票）に比例した額を1.5倍でGMOレバレッジ保有（向きの変化は1時間続いてから反映）。票が消えれば決済。損益は確定分（約定ベース）に、保有中ポジションの含み損益（取引所の評価値）を加えた合計。${(k.blockers || []).length ? " 制限: " + esc(k.blockers.join(" / ")) : ""}</div>${renderVariants()}${renderTopn(feed?.copy_topn)}`;
+    const pnl = k.total_pnl_jpy;
+    $("laneCopy").innerHTML = `<div class="lane-head"><div class="t">GMOコピー（最終方式K3）</div><div class="v ${cls(pnl)}">${signed(pnl)}</div></div>
+      <div class="kv"><div class="k">記録済み確定・費用控除後</div><div class="v">${signed(k.realized_net_jpy)}</div>
+      <div class="k">含み損益</div><div class="v">${signed(k.unrealized_pnl_jpy)}</div>
+      <div class="k">売買手数料／推定保有料</div><div class="v">${yen(k.trading_fee_jpy)} ／ ${yen(k.leverage_fee_est_jpy)}</div>
+      <div class="k">利用可能枠</div><div class="v">${yen(k.budget_jpy)}</div></div>
+      <div class="note">${esc(k.unreconciled_day || "日付不明")}の未照合 ${k.unreconciled_count ?? "不明"}件（全期間の建玉消失記録 ${k.gone_records_total ?? "不明"}件）。上の損益は記録済み分の合計で、完全な照合済み実績ではありません。残差を利益や費用に補完していません。</div>
+      ${k.status === "STOPPED" ? `<div class="note">最終報告に残る旧上限 ${yen(k.last_cap_jpy)}（報告 ${jst(k.last_cap_at)}・計算時点未確認）。現在の発注可能額ではありません。</div>` : ""}
+      <div class="note">K3：上位10人と全員の純票の符号が逆なら全員を採用。最終報告の方式 ${esc(k.leader_filter?.mode || "不明")}。比較モデルと現在状態を分けて表示します。</div>
+      ${renderVariants()}${renderTopn(feed?.copy_topn)}`;
   }
 
   // Owner 2026-11-04: top-10 rule with a 1 h (live) / 2 h / 3 h vote-confirmation wait, paper; decision D18 (11/23).
@@ -1126,14 +1118,14 @@ header>div{min-width:0} header .btn{padding:8px}
   // Owner 2026-11-10: combined direction of all lanes (JPY notional), so a one-sided book before CPI/FOMC is visible.
   function renderExposure(x) {
     const el = $("exposure");
-    if (!x || !(x.rows || []).length) { el.innerHTML = '<div class="note">建玉なし</div>'; return; }
+    if (!x || (!(x.rows || []).length && !(x.unknown || []).length)) { el.innerHTML = '<div class="note">建玉なし</div>'; return; }
     const pctTxt = x.risk_pct == null ? "—" : (x.risk_pct * 100).toFixed(0) + "%";
     const ev = (x.upcoming_events || []).map((e) => `${esc(jst(e.at))} ${esc(e.name)}`).join("、") || "登録なし";
-    el.innerHTML = `<div class="kv"><div class="k">株・暗号資産（+は上がると得）</div><div class="v ${cls(x.risk_jpy)}">${signed(x.risk_jpy)}（総資産の${pctTxt}）</div>
-      <div class="k">金</div><div class="v">${signed(x.gold_jpy)}</div><div class="k">FX</div><div class="v">${signed(x.fx_jpy)}</div>
+    el.innerHTML = `<div class="kv"><div class="k">株・暗号資産（価格取得済み分・+は上がると得）</div><div class="v ${cls(x.risk_jpy)}">${signed(x.risk_jpy)}（総資産の${pctTxt}）</div>
+      <div class="k">金</div><div class="v">${((x.incomplete_buckets || []).includes("gold") ? "不明（評価未取得分あり）" : signed(x.gold_jpy))}</div><div class="k">FX</div><div class="v">${((x.incomplete_buckets || []).includes("fx") ? "不明（評価未取得分あり）" : signed(x.fx_jpy))}</div>
       <div class="k">3日以内の重要指標</div><div class="v">${ev}</div></div>
-      <table class="topn" style="margin-top:6px"><tbody>${x.rows.map((r) => `<tr><td style="text-align:left">${esc(r.lane)}</td><td class="${cls(r.jpy)}">${signed(r.jpy)}</td></tr>`).join("")}</tbody></table>
-      <div class="note">建玉の円換算（コピーと金は目標額で近似）。株と暗号資産は同じ日に一緒に下がりやすいので、合計が大きく片寄ったまま重要指標を迎えると振れが大きくなります。</div>`;
+      <table class="topn" style="margin-top:6px"><tbody>${x.rows.map((r) => `<tr><td style="text-align:left">${esc(r.lane)}<div class="note">価格時点 ${r.price_at ? jst(r.price_at) : "不明"}${r.stale ? "・最新値未確認" : ""}</div></td><td class="${cls(r.jpy)}">${signed(r.jpy)}</td></tr>`).join("")}</tbody></table>
+      <div class="note">実数量×取得済み市場価格×換算率。目標額は含めません。${(x.unknown || []).map(r => esc(r.lane) + "：" + esc(r.reason)).join(" ／ ")}。欠測がある場合、合計は取得済み分のみ。株と暗号資産は同じ日に一緒に下がりやすいので、合計が大きく片寄ったまま重要指標を迎えると振れが大きくなります。</div>`;
   }
 
   function renderWaits(w) {
@@ -1141,7 +1133,7 @@ header>div{min-width:0} header .btn{padding:8px}
     if (!names.length) return "";
     return `<div style="margin-top:10px;font-weight:700;font-size:13px">票の向きが変わってから待つ時間（上位10人・紙上）</div>
       <table class="topn" style="margin-top:4px"><thead><tr><th>待ち時間</th><th>10/11〜</th><th>最大の下落</th><th>11/4〜</th></tr></thead><tbody>${names.map((k) =>
-        `<tr><td>${k === "1h" ? "1時間（今）" : k === "1h_shock_top2" ? "1時間・急変時は上位2人だけ" : k.replace("h", "時間")}</td><td class="${cls(w[k].pnl_jpy)}">${signed(w[k].pnl_jpy)}</td><td>${signed(-w[k].max_dd_jpy)}</td><td class="${cls(w[k].since_switch_jpy)}">${signed(w[k].since_switch_jpy)}</td></tr>`).join("")}</tbody></table>`;
+        `<tr><td>${k === "1h" ? "1時間（比較基準）" : k === "1h_shock_top2" ? "1時間・急変時は上位2人だけ" : k.replace("h", "時間")}</td><td class="${cls(w[k].pnl_jpy)}">${signed(w[k].pnl_jpy)}</td><td>${signed(-w[k].max_dd_jpy)}</td><td class="${cls(w[k].since_switch_jpy)}">${signed(w[k].since_switch_jpy)}</td></tr>`).join("")}</tbody></table>`;
   }
 
   // Owner 2026-11-04: all leaders (live) vs top-10 OKX leaders, paper, daily; switch decision D17 (11/09, 11/23).
@@ -1159,10 +1151,10 @@ header>div{min-width:0} header .btn{padding:8px}
     return `<details style="margin-top:10px"><summary>上位10人と全員の比較（紙上） 累計 全員 <span class="${cls(ca)}">${signed(ca)}</span> ／ 上位10人 <span class="${cls(ct)}">${signed(ct)}</span></summary>
       <svg viewBox="0 0 ${W} ${H}" width="100%" height="90" role="img" aria-label="累計損益の推移：全員と上位10人" style="margin-top:8px">
         <line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line)" stroke-dasharray="3 3"/>${line("ca", "var(--k-copy)")}${line("ct", "var(--accent)")}</svg>
-      <div class="legend"><span><i style="background:var(--k-copy)"></i>全員（今の方式）</span><span><i style="background:var(--accent)"></i>上位10人</span></div>
+      <div class="legend"><span><i style="background:var(--k-copy)"></i>全員（比較基準）</span><span><i style="background:var(--accent)"></i>上位10人</span></div>
       <div style="max-height:320px;overflow:auto;margin-top:6px"><table class="topn"><thead><tr><th>日</th><th>全員</th><th>上位10人</th><th>差</th><th>累計全員</th><th>累計上位</th></tr></thead><tbody>${rows}</tbody></table></div>
       ${renderWaits(t.confirm_waits)}
-      <div class="note">${days.length}日中、上位10人が勝った日 ${wins}日。費用0.02%込みの紙上計算（本番より小さい予算）で、日付はUTC（日本時間9:00区切り）、*は集計途中の日。11/4 18:15から本番は上位10人で運用中。11/23の判定で、切り替え後の期間に全員の方式のほうが良ければ元に戻す（判断D17）。待ち時間も同じ日に、2時間が1時間を切り替え後と全期間の両方で上回り、最大の下落が1.5倍以内なら変更（判断D18）。</div></details>`;
+      <div class="note">${days.length}日中、上位10人が勝った日 ${wins}日。費用0.02%込みの紙上計算（本番より小さい予算）で、日付はUTC（日本時間9:00区切り）、*は集計途中の日。GMOコピーは停止中。停止直前はK3（上位10人と全員の符号が逆なら全員を採用）。この表は比較用の全員／上位10人モデルです。11/23の判定で、切り替え後の期間に全員の方式のほうが良ければ元に戻す（判断D17）。待ち時間も同じ日に、2時間が1時間を切り替え後と全期間の両方で上回り、最大の下落が1.5倍以内なら変更（判断D18）。</div></details>`;
   }
 
   const number = (v) => Number.isFinite(v) ? v.toLocaleString("ja-JP", { maximumFractionDigits: 4 }) : "—";
@@ -1176,9 +1168,10 @@ header>div{min-width:0} header .btn{padding:8px}
     FLIP_CLOSE_NOT_CONFIRMED: "反対売買前の決済確認待ち", COMMODITY_QUOTE_UNAVAILABLE: "商品の価格を取得できません",
     HTTP400: "Saxo APIへの要求エラー", HTTP401: "Saxoの認証エラー", HTTP403: "Saxoのアクセス権限エラー",
     CYCLE_ERROR: "データ取得・処理エラー", ORDER_REJECTED: "注文が拒否されました",
+    OWNER_STOP: "オーナー指示で停止", OWNER_STOP_FLATTEN: "オーナー指示で停止・精算", IDLE: "待機中", OUTSIDE_WINDOW: "時間外待機", OUTSIDE_TRADING_WINDOW: "売買時間外・待機",
     HTTP429_RATE_LIMITED_RETRY_NEXT_CYCLE: "API制限のため次回更新待ち"
   };
-  const blockerText = (b) => BLOCKERS[String(b).split(":")[0]] || "取引条件を確認してください";
+  const blockerText = (b) => BLOCKERS[String(b).split(":")[0]] || String(b);
   function renderSaxoCopy(k) {
     if (k.core_hold) return renderCopyStopped(k);
     const orig = k;
@@ -1219,15 +1212,15 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   function renderCopyStopped(k) {
-    const pts = (feed?.lane_pnl?.saxo_copy?.points || []).filter((q) => Number.isFinite(q.pnl_jpy)),
+    const pts = (feed?.lane_pnl?.saxo_copy_legacy?.points || []).filter((q) => Number.isFinite(q.pnl_jpy)),
       total = pts.length ? pts[pts.length - 1].pnl_jpy : null, p = k.copy_paper;
-    const paper = p ? `<div class="k">紙上：コピー通り（${esc(p.since)}〜、${number(p.days)}日）</div><div class="v ${cls(p.follow_net_jpy)}">${p.follow_net_jpy == null ? `<span class="muted">未計測（価格不足${number(p.unknown_days ?? 0)}日）</span>` : signed(p.follow_net_jpy)}</div>
+    const paper = p ? `<div class="k">紙上：コピー通り（${esc(p.since)}〜、${number(p.days)}日）</div><div class="v ${cls(p.follow_net_jpy)}">${p.follow_net_jpy == null ? `<span class="muted">未計測（比較不能${number(p.unknown_days ?? 0)}日）</span>` : signed(p.follow_net_jpy)}</div>
       <div class="k">紙上：逆張り（同期間）</div><div class="v ${cls(p.inverse_net_jpy)}">${p.inverse_net_jpy == null ? `<span class="muted">未計測</span>` : signed(p.inverse_net_jpy)}</div>`
       : '<div class="k">紙上の記録</div><div class="v muted">初回記録待ち（毎朝9:20）</div>';
     $("laneSaxoCopy").innerHTML = `<div class="lane-head"><div class="t">旧Saxoコピー（停止・紙上記録のみ）</div></div>
       <div class="chips"><span class="pill warn">11/3 12:00から売買停止</span></div>
       <div class="kv"><div class="k">停止までの累計損益（決済＋含み）</div><div class="v ${cls(total)}">${signed(total)}</div>${paper}</div>
-      <div class="note">OKX上位トレーダーの票での売買は止め、資金はTQQQ・金の保有（上のカード）へ回しています。票と、その通り／逆に売買した場合の損益は紙上で毎日記録しています（Saxoの実約定ではなく公開価格と費用モデルによる推定）。</div>`;
+      <div class="note">OKX上位トレーダーの票での売買は止め、資金はTQQQ・金の保有（上のカード）へ回しています。紙上の比較期間は${esc(p?.since || "不明")}〜${esc(p?.last_day || "不明")}。${esc((p?.unknown_reasons || []).join(" ／ ") || "価格・銘柄対応等の不足で比較不能")}。欠測を0円には置換していません。票と比較用の記録を保存しています（Saxoの実約定ではなく公開価格と費用モデルによる推定）。</div>`;
   }
 
   const VERDICT = { ADOPT: ["ok", "採用"], COLLECT: ["warn", "収集"], WATCH: ["warn", "観察"], REJECT: ["bad", "棄却"] };
@@ -1236,7 +1229,7 @@ header>div{min-width:0} header .btn{padding:8px}
   function renderResearch(r, tasks) {
     resData = r || { results: [], counts: {}, backlog: {} };
     const c = resData.counts || {}, total = Object.values(c).reduce((a, b) => a + b, 0);
-    $("resTabs").innerHTML = [["ALL", `全て ${total}`], ...["ADOPT", "COLLECT", "WATCH", "REJECT"].map((v) => [v, `${VERDICT[v][1]} ${c[v] || 0}`])]
+    $("resTabs").innerHTML = [["ALL", `全期間 ${total}／表示 ${resData.results?.length || 0}`], ...["ADOPT", "COLLECT", "WATCH", "REJECT"].map((v) => [v, `${VERDICT[v][1]} 全${c[v] || 0}／表示${(resData.results || []).filter(x => x.verdict === v).length}`])]
       .map(([v, t]) => `<button data-v="${v}" class="${v === resFilter ? "on" : ""}">${t}</button>`).join("");
     const rows = (resData.results || []).filter((x) => resFilter === "ALL" || x.verdict === resFilter);
     $("resList").innerHTML = rows.length ? rows.map((x) => {
@@ -1244,6 +1237,7 @@ header>div{min-width:0} header .btn{padding:8px}
       return `<details><summary><span class="pill ${v[0]}">${v[1]}</span> ${esc(x.idea)} <span class="muted" style="font-size:11px">${esc(x.date)}</span></summary>
         <div class="note" style="margin:6px 0 10px">${esc(x.key)}${x.folder ? `<br>報告: docs/research/ideas/${esc(x.folder)}` : ""}</div></details>`;
     }).join("") : '<div class="empty">該当なし</div>';
+    $("resList").insertAdjacentHTML("afterbegin", `<div class="note">表示は直近${resData.results?.length || 0}件から絞込み ${rows.length}件。全期間${total}件の過去分をこの画面から取得する機能はありません。</div>`);
     renderResearchSummary(resData.summary, resData.fable, c, total, tasks);
     const bl = resData.backlog || {};
     const keys = Object.keys(bl);
@@ -1267,13 +1261,13 @@ header>div{min-width:0} header .btn{padding:8px}
       const band = (x) => {
         const segs = (x.hours || []).map(([a, b]) => `<i style="left:${a / 24 * 100}%;width:${(b - a) / 24 * 100}%"></i>`).join("");
         const cond = x.when && !["毎日", "平日"].includes(x.when);
-        return x.hours ? `<div class="tband${cond ? " cond" : ""}" role="img" aria-label="稼働時間帯 ${esc(x.when || "")}">${segs}<b style="left:${nowH / 24 * 100}%"></b></div>` : "";
+        return x.hours ? `<div class="tband${cond ? " cond" : ""}" role="img" aria-label="当時の運用時間帯 ${esc(x.when || "")}">${segs}</div>` : "";
       };
       $("resLive").innerHTML = `<div class="tscale" aria-hidden="true"><span>0時</span><span>6</span><span>12</span><span>18</span><span>24</span></div>` + (s.live || []).map((x) => {
         const st = LANE_STATE[x.state] || ["warn", x.state];
-        return `<details class="lane-row"><summary><span class="pill ${st[0]}">${st[1]}</span><span class="nm"><b>${esc(x.name)}</b> <span class="muted" style="font-size:11px">${esc(x.venue)}</span></span><span class="res">${esc(x.result)}</span>${band(x)}<span class="when muted">${esc(x.when || "")}</span></summary>
+        return `<details class="lane-row"><summary><span class="pill ${st[0]}">${st[1]}</span><span class="nm"><b>${esc(x.name)}</b> <span class="muted" style="font-size:11px">${esc(x.venue)}</span></span><span class="res">${esc(x.result)}<br><small>${esc(s.updated)}時点</small></span>${band(x)}<span class="when muted">${esc(x.when || "")}</span></summary>
           <div class="note" style="margin:6px 0 10px;line-height:1.7">${esc(x.what)}<br>開始 ${esc(x.since)}・研究の見込み ${esc(x.expect)}・判定日 ${esc(x.review)}</div></details>`;
-      }).join("") + '<div class="note">帯は日本時間で取引・保有する時間帯（縦線＝今）。薄い帯は条件を満たした日だけ動く枠。「判定前」は回数が少なく、まだ良し悪しを言えない枠です。判定日に見込みを下回っていれば元に戻すか止めます。</div>';
+      }).join("") + `<div class="note">${esc(s.updated)}時点の週次スナップショット。現在の状態・損益はレーン一覧を参照。帯も当時の時間帯。薄い帯は条件を満たした日だけ動く枠。「判定前」は回数が少なく、まだ良し悪しを言えない枠です。判定日に見込みを下回っていれば元に戻すか止めます。</div>`;
       $("resLearned").innerHTML = (s.learned || []).map((t) => `<div class="hrow"><div style="line-height:1.6">${esc(t)}</div></div>`).join("");
       $("resDead").innerHTML = (s.dead_ends || []).map((x) => `<div class="hrow"><div>${esc(x.family)}</div><span class="muted" style="font-size:12px;text-align:right">${esc(x.why)}</span></div>`).join("");
     }
@@ -1302,7 +1296,7 @@ header>div{min-width:0} header .btn{padding:8px}
     OUTSIDE_TRADING_WINDOW: "売買時間外（9:00〜9:10に新規、15:00に決済）", JP225_NOT_IN_SESSION: "日経先物の取引時間外",
     TOKYO_CASH_NOT_IN_SESSION: "東証の休場日", US_SIGNAL_STALE_OR_MISSING: "前日の米国データが未取得",
     CLOSE_SETTLING_WAIT: "決済の反映待ち", ORDER_OUTCOME_UNKNOWN_WAIT: "注文結果の確認待ち", ORDER_OUTCOME_UNKNOWN: "注文結果が未確認",
-    CUM_LOSS_STOP: "累計−1万円に達したため停止", FAILED_POST_STOP: "注文の失敗が続いたため停止", KILL_SWITCH: "緊急停止中",
+    CUM_LOSS_STOP: "累計損失の停止条件に到達（下記の現行式）", FAILED_POST_STOP: "注文の失敗が続いたため停止", KILL_SWITCH: "緊急停止中",
     MARGIN_ABOVE_LIMIT: "証拠金使用率が上限超え", NO_RESERVED_MARGIN: "取り分けた証拠金がありません",
     SAXO_TOKEN_EXPIRED_OR_MISSING_NO_REFRESH: "Saxoの認証切れ（再ログイン待ち）", JP225_QUOTE_INVALID_OR_WIDE: "価格が異常・スプレッドが広い"
   };
@@ -1334,7 +1328,7 @@ header>div{min-width:0} header .btn{padding:8px}
     const o = n.open, held = n.units_held > 0;
     const np = n.night_plan || {}, today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
     const pct = (v) => v == null ? "—" : (v >= 0 ? "+" : "") + (v * 100).toFixed(2) + "%";
-    const nightPlan = np.day === today ? (np.go ? `今日：15:10〜に買い（窓開け ${pct(np.gap)}・SOX ${pct(np.sox_ret)}）` : `今日：見送り（窓開け ${pct(np.gap)}・SOX ${pct(np.sox_ret)}${np.error ? "・" + esc(np.error) : ""}）`) : "今日の判定は9:00";
+    const nightPlan = n.rules?.NIGHT_LEG === false ? "廃止・新規停止" : "設定未確認";
     const stopPx = held && o && n.avg_entry && !n.night_held ? (o.side === "Buy" ? n.avg_entry * (1 - n.disaster_stop_frac) : n.avg_entry * (1 + n.disaster_stop_frac)) : null;
     const pos = held && o ? `<span class="${o.side === "Buy" ? "pos" : "neg"}">${o.side === "Buy" ? "買" : "売"}</span> ${number(n.units_held)}単位${n.panic_hold ? "（パニック日の持ち越し・翌朝8:46〜決済）" : n.night_held ? "（夜の買い・翌朝8:46〜決済）" : ""}（平均 ${number(n.avg_entry ?? (o.side === "Buy" ? o.ask : o.bid))}円）` : held ? `${number(n.units_held)}単位` : '<span class="muted">保有なし</span>';
     const q = n.quote || {};
@@ -1344,21 +1338,21 @@ header>div{min-width:0} header .btn{padding:8px}
       <div class="kv"><div class="k">保有</div><div class="v">${pos}</div>
       <div class="k">今の価格（売り／買い）</div><div class="v">${q.bid != null ? number(q.bid) + " ／ " + number(q.ask) : "—"}</div>
       <div class="k">含み損益</div><div class="v ${cls(n.unrealized_pnl_jpy)}">${signed(n.unrealized_pnl_jpy)}</div>
-      <div class="k">確定損益（${n.live_days || 0}日分）</div><div class="v ${cls(n.live_cum_pnl_jpy)}">${signed(n.live_cum_pnl_jpy)}</div>
+      <div class="k">確定損益（${n.closes ?? "—"}決済・${n.live_days ?? "—"}日）</div><div class="v ${cls(n.live_cum_pnl_jpy)}">${signed(n.live_cum_pnl_jpy)}</div>
       <div class="k">累計（確定＋含み）</div><div class="v ${cls(n.lane_pnl_jpy)}">${signed(n.lane_pnl_jpy)}</div>
       <div class="k">3%の損切り価格</div><div class="v">${stopPx ? number(Math.round(stopPx)) + "円" : '<span class="muted">昼の建玉のみ</span>'}</div>
       <div class="k">夜の買い</div><div class="v">${esc(nightPlan)}</div>
       <div class="k">夜の買いの確定損益</div><div class="v ${cls(n.night_cum_pnl_jpy)}">${signed(n.night_cum_pnl_jpy)}</div>
       <div class="k">取り分けた証拠金</div><div class="v">${yen(n.reserve_jpy)}</div></div>
       ${rows ? `<div aria-label="日経枠の直近の注文">${rows}</div>` : '<div class="empty">まだ注文はありません</div>'}
-      <div class="note">前夜の米国株が上げたら9:00に日経225先物CFDを売り、下げたら買う。15:00に決済。逆行3%で損切り（11/10〜）。枚数は口座の余力から毎朝自動（1枚あたり価格の15%）。夜の買い（11/10〜）：9時の窓開け+1%以上かつ前夜SOX+2%以上（または200日平均から10%以上乖離）の日だけ、15:10〜に買って翌朝8:46〜に売る。</div>
+      <div class="note">前夜の米国株が上げたら9:00に日経225先物CFDを売り、下げたら買う。15:00に決済。逆行3%で損切り（11/10〜）。枚数は口座の余力から毎朝自動（1枚あたり価格の15%）。夜の買いは廃止。パニック日の昼の買い持越しは${n.rules?.PANIC_HOLD === true ? "有効（翌朝8:46〜決済、損切り継続）" : "設定未確認"}。累計停止は min(${yen(n.rules?.CUM_LOSS_STOP_JPY)}, −${number(n.rules?.CUM_LOSS_STOP_POINTS_PER_UNIT)}×新規枚数)。</div>
       ${blockers.length ? `<div class="note warn">${blockers.map(esc).join(" / ")}</div>` : ""}`;
   }
 
   function renderBreakout(n, elId = "laneBreakout") {
     const eur = n.pair === "eurjpy", unit = eur ? "ユーロ" : "ドル";
     const zone = n.intervention_zone_level || 160;
-    const st = !n.status ? ["warn", "データなし"] : n.status === "IDLE" || n.status === "OK" || n.status === "BLOCKED" ? ["ok", n.execute ? "実弾で稼働中" : "紙上のみ"] : ["bad", "停止条件あり"];
+    const st = laneState(n);
     const q = n.quote || {}, p = n.position, sig = n.signal || {};
     const zonePill = n.intervention_zone ? `<span class="pill bad">介入警戒 ${zone}円以上：買い見送り・0:30まで売りを待機（利確なし・3:55まで保有）</span>` : `<span class="pill ok">${zone}円未満：通常ルール</span>`;
     const SIDE = (s) => s === "Buy" ? "買" : "売";
@@ -1366,9 +1360,9 @@ header>div{min-width:0} header .btn{padding:8px}
     const rng = sig.high ? `${sig.low}〜${sig.high}（${sig.width_pips ?? ((sig.high - sig.low) * 100).toFixed(1)} pips）` : "";
     const rows = (n.recent || []).slice().reverse().map((e) => `<div class="hrow"><div>${e.op === "CLOSE" ? "決済" : "新規"} ${SIDE(e.side)} ${number(e.amount)}<div class="sub muted" style="font-size:11px">${jst(e.at)}${e.reason ? " ・ " + esc(e.reason) : ""}</div></div><span class="${cls(e.pnl_estimate_jpy)}">${e.pnl_estimate_jpy != null ? signed(e.pnl_estimate_jpy) : ""}</span></div>`).join("");
     const prow = (n.paper_recent || []).slice().reverse().map((e) => `<div class="hrow"><div>${SIDE(e.side)} ${e.entry}→${e.exit}<div class="sub muted" style="font-size:11px">${jst(e.opened_at)} ・ ${esc(e.reason || "")} ・ ${e.pips}pips</div></div><span class="${cls(e.pnl_jpy)}">${signed(e.pnl_jpy)}</span></div>`).join("");
-    const blockers = (n.blockers || []).filter((b) => b !== "OUTSIDE_TRADING_WINDOW");
+    const blockers = (n.blockers || []).map(blockerText);
     const lim = n.range_limits_pips || {};
-    $(elId).innerHTML = `<div class="lane-head"><div class="t">Saxo ${eur ? "ユーロ円" : "ドル円"} 東京レンジ・ブレイクアウト</div><div><span class="pill ${st[0]}">${st[1]}</span></div></div>
+    $(elId).innerHTML = `<div class="lane-head"><div class="t">Saxo ${eur ? "ユーロ円" : "ドル円"} 東京レンジ・ブレイクアウト</div><div><span class="pill ${st[0]}">${st[1]}</span> <span class="pill">${n.execute ? "実弾設定" : "紙上設定"}</span></div></div>
       <div style="margin:6px 0">${eur ? `<span class="pill ok">ドル円が${zone}円以上の間は買い見送り</span>` : zonePill}</div>
       <div class="kv"><div class="k">${eur ? "ユーロ円" : "ドル円"}</div><div class="v">${q.bid ? `${q.bid} / ${q.ask}` : "—"}</div>
       <div class="k">今日の東京レンジ</div><div class="v">${rng ? esc(rng) : '<span class="muted">16:00から判定</span>'}</div>
@@ -1386,7 +1380,7 @@ header>div{min-width:0} header .btn{padding:8px}
 
   function renderDisc(d) {
     const ACC = { saxo_stock: "Saxo株CFD", saxo_fx: "Saxo FX", saxo_commodity: "Saxo商品", gmo: "GMO", gmo_cryptofx: "GMO暗号資産FX" };
-    const rows = (d.trades || []).slice().reverse().map((t) => `<div class="hrow"><div>${esc(t.instrument)} ${t.side === "Buy" ? "買" : "売"} ${number(t.qty)} @${number(t.open_price)}${t.status === "closed" ? ` → ${number(t.close_price)}` : t.price != null ? ` ・今 ${number(t.price)}` : ""}<div class="sub muted" style="font-size:11px">${jst(t.opened_at)}${t.closed_at ? "→" + jst(t.closed_at) : "〜保有中"} ・ ${esc(ACC[t.account] || t.account || "")}${t.note ? " ・ " + esc(t.note) : ""}</div></div><span class="${cls(t.pnl_jpy)}">${t.pnl_jpy != null ? signed(t.pnl_jpy) : "—"}</span></div>`).join("");
+    const rows = (d.trades || []).slice().reverse().map((t) => `<div class="hrow"><div>${esc(t.instrument)} ${t.side === "Buy" ? "買" : "売"} ${number(t.qty)} @${number(t.open_price)}${t.status === "closed" ? ` → ${number(t.close_price)}` : t.price != null ? ` ・評価 ${number(t.price)}（価格時点 ${t.price_at ? jst(t.price_at) : "不明"}）` : ""}<div class="sub muted" style="font-size:11px">${jst(t.opened_at)}${t.closed_at ? "→" + jst(t.closed_at) : "〜保有中"} ・ ${esc(ACC[t.account] || t.account || "")}${t.note ? " ・ " + esc(t.note) : ""}</div></div><span class="${cls(t.pnl_jpy)}">${t.pnl_jpy != null ? signed(t.pnl_jpy) : "—"}</span></div>`).join("");
     const st = d.error ? ["bad", "読み込み失敗"] : d.open ? ["ok", `保有中 ${d.open}件`] : ["warn", "保有なし"];
     $("laneDisc").innerHTML = `<div class="lane-head"><div class="t">裁量・例外枠（オーナー手動）</div><div><span class="pill ${st[0]}">${st[1]}</span></div></div>
       <div class="kv"><div class="k">累計（確定＋含み）</div><div class="v ${cls(d.total_pnl_jpy)}">${signed(d.total_pnl_jpy)}</div>
@@ -1397,7 +1391,7 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   function renderIndex(n) {
-    const st = !n.status ? ["warn", "データなし"] : n.status === "OK" ? ["ok", n.execute ? "実弾で稼働中" : "紙上のみ"] : ["bad", "停止条件あり"];
+    const st = laneState(n);
     const RULE = { SPX_GAP_FADE: "米国500 ギャップ逆張り", EU50_US_OPEN: "欧州50 NY寄り追随", NAS_ORB15: "ナスダック100 寄り付きブレイク（紙上のみ）" };
     const sig = Object.entries(n.signals || {}).map(([k, v]) => `${RULE[k] || k}：${v === "Buy" ? "買" : "売"}`).join(" / ");
     const q = n.quotes || {};
@@ -1405,8 +1399,8 @@ header>div{min-width:0} header .btn{padding:8px}
     const rows = (n.recent || []).slice().reverse().map((e) => `<div class="hrow"><div>${e.op === "CLOSE" ? "決済" : "新規"} ${esc(e.symbol || "")} ${e.side === "Buy" ? "買" : "売"} ${number(e.amount)}<div class="sub muted" style="font-size:11px">${jst(e.at)} ・ ${esc(RULE[e.rule] || e.rule || "")}</div></div><span class="${cls(e.pnl_estimate_jpy)}">${e.pnl_estimate_jpy != null ? signed(e.pnl_estimate_jpy) : ""}</span></div>`).join("");
     const prow = (n.paper_recent || []).slice().reverse().map((e) => `<div class="hrow"><div>${esc(RULE[e.rule] || e.rule)} ${e.side === "Buy" ? "買" : "売"}<div class="sub muted" style="font-size:11px">${jst(e.entry_at)}→${jst(e.exit_at)} ・ ${e.bp}bp</div></div><span class="${cls(e.pnl_jpy_1unit)}">${signed(e.pnl_jpy_1unit)}</span></div>`).join("");
     const popen = Object.entries(n.paper_open || {}).map(([k, o]) => `${RULE[k] || k} ${o.side === "Buy" ? "買" : "売"} ${number(o.entry)}`).join(" / ");
-    const blockers = (n.blockers || []).filter((b) => !/PAPER_ONLY/.test(b));
-    $("laneIndex").innerHTML = `<div class="lane-head"><div class="t">Saxo 夜の指数テスト（最小単位）</div><div><span class="pill ${st[0]}">${st[1]}</span></div></div>
+    const blockers = (n.blockers || []).filter((b) => !/PAPER_ONLY/.test(b)).map(blockerText);
+    $("laneIndex").innerHTML = `<div class="lane-head"><div class="t">Saxo 夜の指数テスト（最小単位）</div><div><span class="pill ${st[0]}">${st[1]}</span> <span class="pill">${n.execute ? "実弾設定" : "紙上設定"}</span></div></div>
       <div class="kv"><div class="k">今日の信号</div><div class="v">${sig ? esc(sig) : '<span class="muted">なし</span>'}</div>
       <div class="k">紙上の保有</div><div class="v">${popen ? esc(popen) : '<span class="muted">なし</span>'}</div>
       <div class="k">紙上の累計（1単位・${n.paper_closes || 0}回）</div><div class="v ${cls(n.paper_cum_jpy)}">${signed(n.paper_cum_jpy)}</div>
@@ -1445,14 +1439,14 @@ header>div{min-width:0} header .btn{padding:8px}
     const nClosed = a.closed_count ?? closes.length;
     const arbPnl = a.closed_pnl_jpy ?? closes.reduce((t, e) => t + (e.est_pnl_jpy || 0), 0);
     $("laneArb").innerHTML = `
-      <div class="lane-head"><div class="t">GMO 現物⇄レバレッジ 価格差</div><div class="v" style="font-size:15px">${open.length ? open.length + "件 建玉中" : '<span class="muted">待機中</span>'}</div></div>
+      <div class="lane-head"><div class="t">GMO 現物⇄レバレッジ 価格差</div><div class="v" style="font-size:15px">${laneState(a)[1]}</div></div>
       <div class="kv"><div class="k">決済済み</div><div class="v">${nClosed} 回</div><div class="k">損益の合計（開始来・約定ベース／一部推定）</div><div class="v ${cls(arbPnl)}">${nClosed ? signed(arbPnl) : "—"}</div></div>
       <div class="note">各銘柄の価格差（順・逆・現物活用の最大値、スプレッド込み）。黄色の線＝成行側の建玉基準30bp。指値で待つ新規建玉は停止中。基準以上でも他の発注条件を満たす必要があります。</div>
       <div class="bars">${rows.join("") || '<div class="empty">データなし</div>'}</div>
       ${open.length ? `<div class="chips">${open.map((o) => `<span class="chip">${o}</span>`).join("")}</div>` : ""}`;
   }
 
-  const LANE = { gmo_crypto_trend: ["暗号", "₿"], gmo_basis_arb: ["価格差", "⇄"], saxo_etf_trend: ["旧ETF口座", "S"], saxo_copy: ["TQQQ・金", "S"], gmo_copy: ["GMOコピー", "⧉"], saxo_nikkei_fade: ["Saxo日経", "N"], saxo_usdjpy_fix: ["Saxo仲値", "¥"], saxo_index_canary: ["Saxo夜指数", "I"], saxo_usdjpy_breakout: ["Saxoブレイク", "B"], saxo_jp_200a_fade: ["Saxo 200A", "A"], owner_discretionary: ["裁量枠", "M"] };
+  const LANE = { gmo_crypto_trend: ["暗号", "₿"], gmo_basis_arb: ["価格差", "⇄"], saxo_etf_trend: ["旧ETF口座", "S"], saxo_copy: ["TQQQ・金の保有", "S"], saxo_eurjpy_breakout: ["Saxoユーロ円", "B"], gmo_copy: ["GMOコピー", "⧉"], saxo_nikkei_fade: ["Saxo日経", "N"], saxo_usdjpy_fix: ["Saxo仲値", "¥"], saxo_index_canary: ["Saxo夜指数", "I"], saxo_usdjpy_breakout: ["Saxoブレイク", "B"], saxo_jp_200a_fade: ["Saxo 200A", "A"], owner_discretionary: ["裁量枠", "M"] };
   function renderEvents(evs) {
     const list = evs.filter((e) => !evLane || e.lane === evLane).slice().reverse().slice(0, 60);
     $("events").innerHTML = list.map((e) => {
@@ -1464,7 +1458,8 @@ header>div{min-width:0} header .btn{padding:8px}
       const amt = pnl != null ? `<span class="${cls(pnl)}">${signed(pnl)}</span>` : e.notional_jpy != null ? yen(e.notional_jpy) : "";
       const desc = /CLOSED/.test(what) || (what === "CLOSE" && ["gmo_copy", "saxo_copy", "saxo_nikkei_fade"].includes(e.lane)) ? "決済" : e.precheck && e.accepted === false ? `見送り（事前確認：${e.error === "WouldExceedMargin" ? "証拠金不足" : e.error || "不可"}）` : failed ? "失敗・要確認" : `${what} ${e.side || ""} ${e.size ?? e.amount ?? ""}`;
       return `<div class="ev"><div class="ic">${ic}</div><div><div>${esc(ln)} ・ ${esc(sym)} ・ <span class="${failed ? "neg" : ""}">${esc(desc)}</span></div><div class="sub">${jst(e.at)}${e.est_pnl_bps != null ? ` ・ ${e.est_pnl_bps}bp` : ""}</div></div><div class="amt">${amt}</div></div>`;
-    }).join("") || '<div class="empty">まだ取引はありません</div>';
+    }).join("") || '<div class="empty">配信された最近の範囲に該当取引がありません</div>';
+    $("events").insertAdjacentHTML("afterbegin", `<div class="note">各台帳の末尾300行を配信（裁量は全記録）。配信 ${evs.length}件のうち、この絞込みで最新${list.length}件を表示。過去の全取引数ではありません。</div>`);
   }
 
   function renderAiUsage(u) {
@@ -1485,9 +1480,7 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   function renderHealth(f) {
-    const L = f.lanes, rows = [
-      ["GMO 暗号トレンド", L.gmo_crypto_trend, 45], ["旧ETF口座", L.saxo_etf_trend, 45], ["GMOコピー", L.gmo_copy, 15], ["TQQQ・金の保有", L.saxo_copy, 15], ["価格差", L.gmo_basis_arb, 5],
-    ];
+    const L = f.lanes, rows = Object.entries(L).map(([key, lane]) => [LANE[key]?.[0] || key, lane, key === "saxo_etf_trend" || key === "gmo_crypto_trend" ? 45 : 15]);
     const wd = f.watchdog || {}, wdFail = Object.entries(wd.failing || {});
     const wdRow = `<div class="hrow"><div>見張り役（5分ごと）<div class="sub muted" style="font-size:11px">${wd.generated_at ? esc(wdFail.map(([k, v]) => k + ": " + v).join(" / ") || "ネットワーク・ジョブ・証拠金・disk すべて正常") + " ・ " + jst(wd.generated_at) : "未取得"}</div></div><span class="pill ${!wd.generated_at ? "warn" : wdFail.length ? "bad" : "ok"}">${!wd.generated_at ? "—" : wdFail.length ? wdFail.length + "件 異常" : "正常"}</span></div>`;
     const mac = f.mac || {}, gb = (v) => (v / 1024 ** 3).toFixed(v >= 1024 ** 4 ? 0 : 1) + "GB";
@@ -1496,12 +1489,11 @@ header>div{min-width:0} header .btn{padding:8px}
     const macBad = (freePct != null && freePct < 10) || (loadR != null && loadR > 2) || (memPct != null && memPct > 95);
     const macWarn = (freePct != null && freePct < 20) || (loadR != null && loadR > 1) || (memPct != null && memPct > 85) || macAge > 20;
     const macRow = `<div class="hrow"><div>このMac<div class="sub muted" style="font-size:11px">${macKnown ? `空き ${mac.disk ? gb(mac.disk.free) + `(${freePct.toFixed(0)}%)` : "—"} ・ 負荷 ${mac.cpu ? mac.cpu.load1.toFixed(1) + `/${mac.cpu.cores}コア` : "—"} ・ メモリ ${memPct == null ? "—" : memPct.toFixed(0) + "%(概算)"} ・ ${jst(mac.sampled_at)}` : "未取得"}</div></div><span class="pill ${!macKnown ? "warn" : macBad ? "bad" : macWarn ? "warn" : "ok"}">${!macKnown ? "—" : macBad ? "要確認" : macWarn ? "注意" : "正常"}</span></div>`;
-    $("health").innerHTML = wdRow + macRow + rows.map(([name, l, maxAge]) => {
+    $("health").innerHTML = wdRow + (wd.intentional_stops?.length ? `<div class="note">意図的停止：${wd.intentional_stops.map(x => esc(x.reason)).filter((x,i,a) => a.indexOf(x) === i).join(" ／ ")}</div>` : "") + macRow + rows.map(([name, l, maxAge]) => {
       l = l || {};
-      const age = ageMin(l.updated_at), okStatus = String(l.status || "").startsWith("OK");
-      const blockers = [...(l.blockers || []), ...(l.entry_blockers || [])].filter((b) => !/^(US|COMMODITY)_SESSION_CLOSED/.test(b));
-      const state = !Number.isFinite(age) || age < 0 ? ["warn", "未取得"] : age > maxAge ? ["warn", `更新${Math.round(age)}分前`] : !okStatus && l.status !== "BLOCKED" ? ["bad", "エラー"] : blockers.length ? ["warn", "制限あり"] : ["ok", "正常"];
-      return `<div class="hrow"><div>${name}<div class="sub muted" style="font-size:11px">${esc(blockers.map(blockerText).join(" / ") || jst(l.updated_at))}</div></div><span class="pill ${state[0]}">${state[1]}</span></div>`;
+      const age = ageMin(l.updated_at || l.generated_at), state = laneState(l);
+      const blockers = [...(l.blockers || []), ...(l.entry_blockers || [])];
+      return `<div class="hrow"><div>${esc(name)}<div class="sub muted" style="font-size:11px">${esc(l.stop_reason || blockers.map(blockerText).join(" / "))}<br>報告 ${jst(l.updated_at || l.generated_at)}${age > maxAge ? "・古い報告" : ""}</div></div><span class="pill ${state[0]}">${state[1]}</span></div>`;
     }).join("") + [["copy", "コピーシグナル収集", 20], ["xex", "取引所間価格収集", 5], ["fx_sentiment", "FXセンチメント収集", 40]].map(([key, name, limit]) => {
       const c = f.collectors?.[key] || {}, age = ageMin(c.generated_at);
       const known = Number.isFinite(age) && age >= 0;
