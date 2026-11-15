@@ -273,6 +273,12 @@ header>div{min-width:0} header .btn{padding:8px}
   </div>
 
   <div class="page" id="page-ai" hidden>
+  <h2>AIの議論テスト（TradingAgents型・紙上）</h2>
+  <section class="card" id="llmHead"><div class="empty">読み込み中</div></section>
+  <h2>直近の判断と議論</h2>
+  <section class="card" id="llmDays"></section>
+  <h2>全銘柄・売りあり版（研究中）</h2>
+  <section class="card" id="llmUniverse"></section>
   <h2>AI直感枠（ペーパー・実売買ではありません）</h2>
   <section class="card" id="aiHead"><div class="empty">読み込み中</div></section>
   <nav class="tabs" id="aiSel" aria-label="詳細の切替"><button data-a="claude" class="on">Claudeの詳細</button><button data-a="codex">Codexの詳細</button></nav>
@@ -483,6 +489,42 @@ header>div{min-width:0} header .btn{padding:8px}
       ${bot.length ? `<div class="note">下位</div><div style="overflow-x:auto"><table class="variants">${head}<tbody>${bot.map(line).join("")}</tbody></table></div>` : ""}`;
   }
 
+  // Owner 2026-11-15: TA-style debate (7 calls) vs single call, AAPL/GOOGL/AMZN, paper, 60 NYSE days from 11/16.
+  function renderLlm(L) {
+    if (!L) { ["llmHead", "llmDays", "llmUniverse"].forEach((id) => { $(id).innerHTML = '<div class="empty">データなし</div>'; }); return; }
+    const RJ = { Buy: "買い", Overweight: "やや買い", Hold: "様子見", Underweight: "やや売り", Sell: "売り" };
+    const ROLE = { market: "値動き担当", news: "ニュース担当", fundamentals: "決算担当", social: "SNS担当", bull: "買い派", bear: "売り派", risk: "リスク担当", final: "最終判断" };
+    const sc = L.scored || [], sum = (k) => sc.reduce((a, x) => a + (Number.isFinite(x[k]) ? x[k] : 0), 0);
+    const ctl = (k) => sc.reduce((a, x) => a + (Number.isFinite(x.controls?.[k]) ? x.controls[k] : 0), 0);
+    const ctlNames = sc.length ? Object.keys(sc[sc.length - 1].controls || {}) : [];
+    const CN = { cash: "何もしない", all_long: "毎日3銘柄買う", always_long: "毎日3銘柄買う", prior_up: "前日上げた銘柄を買う", prior_down: "前日下げた銘柄を買う" };
+    $("llmHead").innerHTML = `<div class="kv">
+        <div class="k">採点済み</div><div class="v">${sc.length} / ${L.planned_sessions}営業日（${esc(L.start)}〜）</div>
+        <div class="k">議論方式（7回）</div><div class="v ${cls(sum("multi_jpy"))}">${signed(sum("multi_jpy"))}（費用2倍 ${signed(sum("multi_stress_jpy"))}）</div>
+        <div class="k">AI1回方式</div><div class="v ${cls(sum("single_jpy"))}">${signed(sum("single_jpy"))}（費用2倍 ${signed(sum("single_stress_jpy"))}）</div>
+        <div class="k">差（議論−1回）</div><div class="v ${cls(sum("multi_jpy") - sum("single_jpy"))}">${signed(sum("multi_jpy") - sum("single_jpy"))}</div>
+        ${ctlNames.map((k) => `<div class="k">比較：${esc(CN[k] || k)}</div><div class="v ${cls(ctl(k))}">${signed(ctl(k))}</div>`).join("")}</div>
+      <div class="note">対象 ${esc((L.tickers || []).join("・"))}。毎営業日22:45に判断し、米国の寄付で買うか何もしないかを決めて引けで手仕舞う紙上テスト（100万円を3等分、片道0.05%の費用込み）。同じAI（Codex）に役割を変えて7回聞く議論方式と、1回だけ聞く方式を比べます。60日終了後に、議論方式が1回方式・単純ルールに費用込みで勝つかを判定します。実際の注文はしていません。</div>`;
+    const days = L.sessions || [];
+    $("llmDays").innerHTML = days.length ? days.map((d) => {
+      const by = {}; (d.decisions || []).forEach((x) => { (by[x.ticker] = by[x.ticker] || {})[x.method] = x; });
+      const res = sc.find((x) => x.session === d.session);
+      return `<div style="font-weight:700;margin:10px 0 4px">${esc(d.session)}（米国）${res ? ` <span class="${cls(res.multi_jpy)}">議論 ${signed(res.multi_jpy)}</span> ／ <span class="${cls(res.single_jpy)}">1回 ${signed(res.single_jpy)}</span>` : ' <span class="muted">未採点</span>'}</div>` +
+        Object.entries(by).map(([t, m]) => {
+          const mu = m.multi || {}, si = m.single || {};
+          const r = (x) => x.state === "OK" ? `${esc(RJ[x.rating] || x.rating)}${x.long ? "→買い" : "→見送り"}` : `<span class="neg">エラー</span>`;
+          const bp = (meth) => { const v = res?.tickers?.[meth]?.[t]?.bp; return Number.isFinite(v) ? ` <span class="${cls(v)}">${v >= 0 ? "+" : ""}${v.toFixed(0)}bp</span>` : ""; };
+          return `<details><summary><b>${esc(t)}</b>　議論：${r(mu)}${bp("multi")}　1回：${r(si)}${bp("single")}</summary>
+            <div class="note" style="margin:6px 0 10px;line-height:1.7">
+            ${(mu.debate || []).map((x) => `<b>${esc(ROLE[x.role] || x.role)}</b>：${esc(x.text)}`).join("<br>") || esc(mu.error || "議論の記録なし")}
+            ${mu.wrong_if ? `<br><b>間違いになる条件</b>：${esc(mu.wrong_if)}` : ""}
+            ${si.state === "OK" ? `<br><br><b>1回方式の理由</b>：${esc(si.reason)}${si.wrong_if ? `<br><b>間違いになる条件</b>：${esc(si.wrong_if)}` : ""}` : ""}</div></details>`;
+        }).join("");
+    }).join("") : '<div class="empty">最初の判断は 11/16（月）22:45 JST</div>';
+    const u = L.universe || {};
+    $("llmUniverse").innerHTML = u.verdict_line ? `<div class="note" style="line-height:1.7">${esc(u.verdict_line)}<br>報告: docs/research/ideas/20261115_llm_agents_universe</div>`
+      : '<div class="note">米国株（S&P100・指数）・日本株・FX主要6ペア・暗号資産5銘柄に広げ、売りも含めた2段階版（候補選び→議論）を、AIの学習時期より後の期間で20日分試しに検証中です。</div>';
+  }
   function renderAi(a, c) {
     const head = $("aiHead"), live = $("aiLive"), tr = $("aiTrades"), svg = $("aiChart");
     const has = (x) => x && x.summary;
@@ -671,6 +713,7 @@ header>div{min-width:0} header .btn{padding:8px}
     renderHousehold(f.household);
     renderWeights(f.copy_ranking);
     renderAi(f.ai_intuition, f.ai_intuition_codex);
+    renderLlm(f.llm_agents);
     renderTasks(f.tasks);
     renderFire(f.fire_plan);
   }
