@@ -503,8 +503,9 @@ header>div{min-width:0} header .btn{padding:8px}
         <div class="k">議論方式（7回）</div><div class="v ${cls(sum("multi_jpy"))}">${signed(sum("multi_jpy"))}（費用2倍 ${signed(sum("multi_stress_jpy"))}）</div>
         <div class="k">AI1回方式</div><div class="v ${cls(sum("single_jpy"))}">${signed(sum("single_jpy"))}（費用2倍 ${signed(sum("single_stress_jpy"))}）</div>
         <div class="k">差（議論−1回）</div><div class="v ${cls(sum("multi_jpy") - sum("single_jpy"))}">${signed(sum("multi_jpy") - sum("single_jpy"))}</div>
-        ${ctlNames.map((k) => `<div class="k">比較：${esc(CN[k] || k)}</div><div class="v ${cls(ctl(k))}">${signed(ctl(k))}</div>`).join("")}</div>
-      <div class="note">対象 ${esc((L.tickers || []).join("・"))}。毎営業日22:45に判断し、米国の寄付で買うか何もしないかを決めて引けで手仕舞う紙上テスト（100万円を3等分、片道0.05%の費用込み）。同じAI（Codex）に役割を変えて7回聞く議論方式と、1回だけ聞く方式を比べます。60日終了後に、議論方式が1回方式・単純ルールに費用込みで勝つかを判定します。実際の注文はしていません。</div>`;
+        ${ctlNames.map((k) => `<div class="k">比較：${esc(CN[k] || k)}</div><div class="v ${cls(ctl(k))}">${signed(ctl(k))}</div>`).join("")}
+        ${(() => { const g = L.gemini?.report; return g ? `<div class="k">Gemini 1回方式（別枠）</div><div class="v ${cls(g.gemini_base_jpy)}">${signed(g.gemini_base_jpy)}（費用2倍 ${signed(g.gemini_stress_jpy)}・${g.scored_sessions}日・Codex1回と同じ判断 ${g.agree_with_codex_single}/${g.ok_decisions}）</div>` : ""; })()}</div>
+      <div class="note">対象 ${esc((L.tickers || []).join("・"))}。毎営業日22:45に判断し、米国の寄付で買うか何もしないかを決めて引けで手仕舞う紙上テスト（100万円を3等分、片道0.05%の費用込み）。同じAI（Codex）に役割を変えて7回聞く議論方式と、1回だけ聞く方式を比べます。60日終了後に、議論方式が1回方式・単純ルールに費用込みで勝つかを判定します。別枠で、同じ材料をGoogleのGemini（無料枠のため1回方式のみ、22:50）にも聞いて比べています（判定には使いません）。実際の注文はしていません。</div>`;
     const days = L.sessions || [];
     $("llmDays").innerHTML = days.length ? days.map((d) => {
       const by = {}; (d.decisions || []).forEach((x) => { (by[x.ticker] = by[x.ticker] || {})[x.method] = x; });
@@ -514,11 +515,14 @@ header>div{min-width:0} header .btn{padding:8px}
           const mu = m.multi || {}, si = m.single || {};
           const r = (x) => x.state === "OK" ? `${esc(RJ[x.rating] || x.rating)}${x.long ? "→買い" : "→見送り"}` : `<span class="neg">エラー</span>`;
           const bp = (meth) => { const v = res?.tickers?.[meth]?.[t]?.bp; return Number.isFinite(v) ? ` <span class="${cls(v)}">${v >= 0 ? "+" : ""}${v.toFixed(0)}bp</span>` : ""; };
-          return `<details><summary><b>${esc(t)}</b>　議論：${r(mu)}${bp("multi")}　1回：${r(si)}${bp("single")}</summary>
+          const ge = L.gemini?.sessions?.[d.session]?.[t], gbp = L.gemini?.scored_bp?.[d.session]?.[t];
+          const gtxt = ge ? `　Gemini：${r(ge)}${Number.isFinite(gbp) ? ` <span class="${cls(gbp)}">${gbp >= 0 ? "+" : ""}${gbp.toFixed(0)}bp</span>` : ""}` : "";
+          return `<details><summary><b>${esc(t)}</b>　議論：${r(mu)}${bp("multi")}　1回：${r(si)}${bp("single")}${gtxt}</summary>
             <div class="note" style="margin:6px 0 10px;line-height:1.7">
             ${(mu.debate || []).map((x) => `<b>${esc(ROLE[x.role] || x.role)}</b>：${esc(x.text)}`).join("<br>") || esc(mu.error || "議論の記録なし")}
             ${mu.wrong_if ? `<br><b>間違いになる条件</b>：${esc(mu.wrong_if)}` : ""}
-            ${si.state === "OK" ? `<br><br><b>1回方式の理由</b>：${esc(si.reason)}${si.wrong_if ? `<br><b>間違いになる条件</b>：${esc(si.wrong_if)}` : ""}` : ""}</div></details>`;
+            ${si.state === "OK" ? `<br><br><b>1回方式の理由</b>：${esc(si.reason)}${si.wrong_if ? `<br><b>間違いになる条件</b>：${esc(si.wrong_if)}` : ""}` : ""}
+            ${ge && ge.state === "OK" ? `<br><br><b>Geminiの理由</b>：${esc(ge.reason)}` : ""}</div></details>`;
         }).join("");
     }).join("") : '<div class="empty">最初の判断は 11/16（月）22:45 JST</div>';
     const u = L.universe || {};
