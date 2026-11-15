@@ -319,6 +319,10 @@ header>div{min-width:0} header .btn{padding:8px}
   <div class="page" id="page-research" hidden>
   <h2>ひとことで</h2>
   <section class="card" id="resHead"></section>
+  <h2>取り入れたもの・始めたもの</h2>
+  <section class="card" id="resAdopted"></section>
+  <h2>最近の研究（直近3週間）</h2>
+  <section class="card" id="resRecent"></section>
   <h2>週次の運用スナップショット（現在値はレーン一覧）</h2>
   <section class="card" id="resLive"></section>
   <h2>わかったこと</h2>
@@ -1254,6 +1258,7 @@ header>div{min-width:0} header .btn{padding:8px}
     }).join("") : '<div class="empty">該当なし</div>';
     $("resList").insertAdjacentHTML("afterbegin", `<div class="note">表示は直近${resData.results?.length || 0}件から絞込み ${rows.length}件。全期間${total}件の過去分をこの画面から取得する機能はありません。</div>`);
     renderResearchSummary(resData.summary, resData.fable, c, total, tasks);
+    renderAdopted(resData.adoptions || [], resData.recent || []);
     const bl = resData.backlog || {};
     const keys = Object.keys(bl);
     $("resBacklog").innerHTML = keys.length ? keys.map((k) => `<div class="note" style="margin:10px 0 4px"><b>${esc(TRACK[k] || k)}</b> ・ 残り ${bl[k].length}件</div>` +
@@ -1264,6 +1269,19 @@ header>div{min-width:0} header .btn{padding:8px}
       const st = t.state === "running" ? ["warn", "実行中"] : t.state === "done" ? ["ok", "完了"] : t.state === "failed" ? ["bad", "失敗"] : ["warn", t.state];
       return `<div class="hrow"><div>${esc(TRACK[String(t.name).replace(/^idea-loop-?/, "") || "general"] || t.name)}<div class="sub muted" style="font-size:11px">${jst(t.started_at)}${t.finished_at ? " → " + jst(t.finished_at) : ""}</div></div><span class="pill ${st[0]}">${st[1]}</span></div>`;
     }).join("") : '<div class="empty">直近の実行記録なし（毎時5本が並列で動きます）</div>';
+  }
+  // Owner 2026-11-15: what has been adopted / started, and the verdicts of the recent research rounds.
+  function renderAdopted(ad, recent) {
+    const st = { "稼働中": "ok", "完了": "ok", "紙上記録中": "warn", "設定待ち": "warn", "作成中": "warn" };
+    $("resAdopted").innerHTML = ad.length ? ad.map((x) => `<details><summary><span class="pill ${st[x.status] || ""}">${esc(x.status)}</span> <b>${esc(x.name)}</b> <span class="muted" style="font-size:11px">${esc(x.kind)}・${esc(x.date)}</span></summary>
+      <div class="note" style="margin:6px 0 10px;line-height:1.7">${esc(x.what)}<br><span class="muted">きっかけ：${esc(x.source)}</span></div></details>`).join("") : '<div class="empty">記録なし</div>';
+    const VX = { ...VERDICT, ADOPT_PART: ["ok", "一部採用"], CANDIDATE: ["ok", "候補"], KEEP: ["ok", "継続"], KEEP_BASE: ["ok", "継続"], RETIRE: ["bad", "廃止"], NOT_WORTH: ["bad", "見送り"] };
+    const VERDICT_ = VX;
+    const lab = (k) => (VERDICT_[k] || ["", "その他"])[1];
+    const cnt = {}; recent.forEach((x) => { cnt[lab(x.verdict)] = (cnt[lab(x.verdict)] || 0) + 1; });
+    $("resRecent").innerHTML = recent.length ? `<div class="note" style="margin-bottom:6px">${recent.length}件：${Object.entries(cnt).map(([k, n]) => `${esc(k)} ${n}`).join("・")}</div>` +
+      recent.map((x) => { const v = VERDICT_[x.verdict] || ["warn", "その他"]; return `<details><summary><span class="pill ${v[0]}">${esc(v[1])}</span> ${esc(x.line.replace(/^[A-Z_|: ]+—\s*/, "").slice(0, 70))} <span class="muted" style="font-size:11px">${esc(x.date)}</span></summary>
+      <div class="note" style="margin:6px 0 10px">${esc(x.line)}<br>報告: docs/research/ideas/${esc(x.folder)}</div></details>`; }).join("") : '<div class="empty">記録なし</div>';
   }
   const LANE_STATE = { good: ["ok", "順調"], wait: ["warn", "判定前"], bad: ["bad", "要注意"] };
   function renderResearchSummary(s, fable, c, total, tasks) {
