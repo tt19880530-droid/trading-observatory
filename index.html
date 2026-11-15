@@ -1100,7 +1100,22 @@ header>div{min-width:0} header .btn{padding:8px}
       <div class="note">${esc(k.unreconciled_day || "日付不明")}の未照合 ${k.unreconciled_count ?? "不明"}件（全期間の建玉消失記録 ${k.gone_records_total ?? "不明"}件）。上の損益は記録済み分の合計で、完全な照合済み実績ではありません。残差を利益や費用に補完していません。</div>
       ${k.status === "STOPPED" ? `<div class="note">最終報告に残る旧上限 ${yen(k.last_cap_jpy)}（報告 ${jst(k.last_cap_at)}・計算時点未確認）。現在の発注可能額ではありません。</div>` : ""}
       <div class="note">K3：上位10人と全員の純票の符号が逆なら全員を採用。最終報告の方式 ${esc(k.leader_filter?.mode || "不明")}。比較モデルと現在状態を分けて表示します。</div>
+      ${renderCopyVotes(k.votes_now)}
       ${renderVariants()}${renderTopn(feed?.copy_topn)}`;
+  }
+
+  // Owner 2026-11-15: votes per method although the lane is stopped (paper view, recomputed every feed build).
+  function renderCopyVotes(v) {
+    if (!v || v.status !== "OK") return `<div class="note">票：${esc(v?.status === "COLLECTOR_STALE" ? "集計データが古いため表示できません" : "取得できません")}${v?.at ? "（" + esc(jst(v.at)) + "）" : ""}</div>`;
+    const coins = ["BTC", "ETH", "XRP", "SOL", "DOGE"];
+    const fmt = x => Number.isFinite(x) ? `<span class="${cls(x)}">${x > 0 ? "+" : ""}${x}</span>` : "—";
+    const tr = { up: "上昇", down: "下落", flat: "横ばい" };
+    const row = (name, m) => `<tr><td>${name}</td>${coins.map(c => `<td>${fmt(m?.[c])}</td>`).join("")}</tr>`;
+    return `<div style="margin-top:10px;font-weight:700;font-size:13px">今の票（停止中・計算のみ）</div>
+      <div style="overflow-x:auto"><table class="variants" aria-label="GMOコピーの今の票"><thead><tr><th>方式</th>${coins.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>
+      ${row("全員", v.all)}${row("上位10人", v.top10)}${row("K3（停止前の方式）", v.k3)}${row("V1（K3＋上昇トレンドだけ買い）", v.v1)}
+      <tr><td class="muted">トレンド(14日・30日)</td>${coins.map(c => `<td class="muted">${esc(tr[v.trend?.[c]] || "不明")}</td>`).join("")}</tr></tbody></table></div>
+      <div class="note">${esc(jst(v.at))}時点。OKX上位トレーダー${v.traders}人の未決済建玉で、1人1票（買い＋1・売り−1）の差し引き。上位10人は${esc(jst(v.selection_cutoff) || "選定なし")}の選定。K3は上位10人と全員の向きが逆の銘柄だけ全員の票。V1はK3の買い票をトレンドが上昇の銘柄に限ったもの。売買はしていません（本番の1時間の向き確認待ちは省略）。</div>`;
   }
 
   // Owner 2026-11-04: top-10 rule with a 1 h (live) / 2 h / 3 h vote-confirmation wait, paper; decision D18 (11/23).
