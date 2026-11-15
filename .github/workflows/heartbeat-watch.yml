@@ -1,0 +1,37 @@
+name: Heartbeat watch
+# The owner's Mac pushes branch "heartbeat" every ~10 min while its internet works. If it goes stale (Mac off/asleep,
+# home IPv4 down, push broken), send one phone alert via ntfy at ~30 min and a reminder at ~3 h. Stateless: windows below.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "send a test notification"
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check heartbeat age
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          TEST: ${{ inputs.test }}
+        run: |
+          set -eu
+          last=$(gh api repos/${{ github.repository }}/branches/heartbeat -q .commit.commit.committer.date)
+          age=$(( ( $(date -u +%s) - $(date -u -d "$last" +%s) ) / 60 ))
+          echo "heartbeat $last age ${age} min"
+          send() { curl -sS -m 20 -H "Priority: $2" -H "Tags: warning" -d "$1" "https://ntfy.sh/${NTFY_TOPIC}" >/dev/null; }
+          if [ "${TEST:-false}" = "true" ]; then send "テスト：外部監視（GitHub）から送信。最終heartbeat ${age}分前" default; exit 0; fi
+          last_jst=$(TZ=Asia/Tokyo date -d "$last" +"%m/%d %H:%M")
+          if [ "$age" -ge 30 ] && [ "$age" -lt 45 ]; then
+            send "Macからの生存信号が${age}分途絶（最終 ${last_jst} JST）。Mac停止・スリープ・自宅回線の不通の可能性。自動売買も止まっている可能性あり" high
+          elif [ "$age" -ge 180 ] && [ "$age" -lt 195 ]; then
+            send "まだMacからの生存信号なし（${age}分、最終 ${last_jst} JST）。ルーター/ONUの再起動やMacの確認を" high
+          fi
