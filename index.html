@@ -238,6 +238,7 @@ header>div{min-width:0} header .btn{padding:8px}
     <section class="card" id="laneArb"></section>
     <section class="card" id="laneDisc"></section>
     <section class="card" id="lane200A"></section>
+    <section class="card" id="laneEvents"></section>
   </div>
   </div>
 
@@ -624,8 +625,22 @@ header>div{min-width:0} header .btn{padding:8px}
       el.insertAdjacentHTML("afterbegin", `<div class="lane-freshness note"><span class="pill ${st[0]}">${st[1]}</span> ${esc(l.stop_reason || "")} ${l.execute == null ? "" : l.execute ? "実弾設定" : "紙上設定"}<br>報告 ${jst(l.updated_at || l.generated_at)}${old ? "（古い報告）" : ""}${l.valuation_reason ? " ／ 評価元 " + (l.valuation_at ? jst(l.valuation_at) : "時刻不明") + "・" + esc(l.valuation_reason) : ""}</div>`);
     }
   }
+  function stoppedBanner(n) {
+    return n && n.stopped_note ? `<div class="note" style="border:1px solid var(--warn,#b7791f);padding:6px 8px;margin-bottom:8px;border-radius:6px"><b>停止中</b>：${esc(n.stopped_note)}（下の数字は停止までの記録）</div>` : "";
+  }
+  function renderEventLanes(e) {
+    const el = $("laneEvents");
+    if (!el) return;
+    if (!e || !e.lanes) { el.innerHTML = ""; return; }
+    const rows = e.lanes.map((l) => `<div class="k">${esc(l.label)}</div><div class="v">${l.cum_pnl_jpy == null ? "—" : signed(l.cum_pnl_jpy)}（${esc(l.when)}）</div>`).join("");
+    const nxt = (e.next || []).length ? e.next.map((x) => `${esc(x.date)} ${esc(x.what)}`).join(" ／ ") : "公式発表された日程なし（NVDAは日程発表待ち）";
+    el.innerHTML = `<div class="lane-head"><div class="t">イベント枠（11/18開始・日程のある日だけ動く）</div><div><span class="pill">待機中</span></div></div>
+      <div class="kv">${rows}</div>
+      <div class="note">次の予定：${nxt}</div>
+      <div class="note">${esc(e.fomc_note || "")}</div>`;
+  }
   function render200A(n) {
-    $("lane200A").innerHTML = `<div class="lane-head"><div class="t">Saxo 200A（日経半導体ETF）</div><div class="v ${cls(n.lane_pnl_jpy)}">${signed(n.lane_pnl_jpy)}</div></div>
+    $("lane200A").innerHTML = stoppedBanner(n) + `<div class="lane-head"><div class="t">Saxo 200A（日経半導体ETF）</div><div class="v ${cls(n.lane_pnl_jpy)}">${signed(n.lane_pnl_jpy)}</div></div>
       <div class="kv"><div class="k">保有数量</div><div class="v">${n.held == null ? "未取得（直近報告に数量なし）" : number(n.held)}</div>
       <div class="k">台帳上の保有</div><div class="v">${number(n.recorded_held)}（${jst(n.holdings_at)}）</div>
       <div class="k">記録済み決済</div><div class="v">${n.closes ?? "—"}件・${signed(n.realized_pnl_jpy)}</div>
@@ -701,6 +716,7 @@ header>div{min-width:0} header .btn{padding:8px}
     renderIndex(f.lanes.saxo_index_canary || {});
     renderDisc(f.lanes.owner_discretionary || {}, [f.lanes.saxo_usdjpy_breakout, f.lanes.saxo_eurjpy_breakout].flatMap((b) => (b && b.owner_addons) || []));
     render200A(f.lanes.saxo_jp_200a_fade || {});
+    renderEventLanes(f.event_lanes);
     renderBreakout(f.lanes.saxo_usdjpy_breakout || {});
     renderBreakout(f.lanes.saxo_eurjpy_breakout || {}, "laneBreakoutEur");
     renderLaneFreshness(f);
@@ -1442,7 +1458,7 @@ header>div{min-width:0} header .btn{padding:8px}
     const prow = (n.paper_recent || []).slice().reverse().map((e) => `<div class="hrow"><div>${SIDE(e.side)} ${e.entry}→${e.exit}<div class="sub muted" style="font-size:11px">${jst(e.opened_at)} ・ ${esc(e.reason || "")} ・ ${e.pips}pips</div></div><span class="${cls(e.pnl_jpy)}">${signed(e.pnl_jpy)}</span></div>`).join("");
     const blockers = (n.blockers || []).map(blockerText);
     const lim = n.range_limits_pips || {};
-    $(elId).innerHTML = `<div class="lane-head"><div class="t">Saxo ${eur ? "ユーロ円" : "ドル円"} 東京レンジ・ブレイクアウト</div><div><span class="pill ${st[0]}">${st[1]}</span> <span class="pill">${n.execute ? "実弾設定" : "紙上設定"}</span></div></div>
+    $(elId).innerHTML = stoppedBanner(n) + `<div class="lane-head"><div class="t">Saxo ${eur ? "ユーロ円" : "ドル円"} 東京レンジ・ブレイクアウト</div><div><span class="pill ${st[0]}">${st[1]}</span>${n.execute == null ? "" : ` <span class="pill">${n.execute ? "実弾設定" : "紙上設定"}</span>`}</div></div>
       <div style="margin:6px 0">${eur ? `<span class="pill ok">ドル円が${zone}円以上の間は買い見送り</span>` : zonePill}</div>
       <div class="kv"><div class="k">${eur ? "ユーロ円" : "ドル円"}</div><div class="v">${q.bid ? `${q.bid} / ${q.ask}` : "—"}</div>
       <div class="k">今日の東京レンジ</div><div class="v">${rng ? esc(rng) : '<span class="muted">16:00から判定</span>'}</div>
