@@ -870,7 +870,7 @@ header>div{min-width:0} header .btn{padding:8px}
   }
 
   let calMonth = null, calMode = "day", calSel = null, calLane = "all";
-  const CAL_LANES = [["all", "全体"], ["copy", "GMOコピー"], ["arb", "価格差"], ["trend", "暗号トレンド"], ["gap", "GMO差"], ["saxo", "TQQQ・金"], ["legacy", "旧Saxoコピー"], ["saxo_gap", "Saxo未配賦差"], ["nikkei", "Saxo日経"], ["index", "Saxo夜指数"], ["fx", "Saxo仲値"], ["brk", "Saxoブレイク"], ["a200", "Saxo 200A"], ["jps", "Saxo日本株"], ["soxx", "SOXX反発"], ["disc", "裁量枠"]];
+  const CAL_LANES = [["all", "全体"], ["copy", "GMOコピー"], ["arb", "価格差"], ["trend", "暗号トレンド"], ["gap", "GMO差"], ["saxo", "TQQQ・金"], ["legacy", "旧Saxoコピー"], ["saxo_gap", "Saxo未配賦差"], ["nikkei", "Saxo日経"], ["index", "Saxo夜指数"], ["fx", "Saxo仲値"], ["brk", "Saxoブレイク"], ["a200", "Saxo 200A"], ["jps", "Saxo日本株"], ["soxx", "SOXX反発"], ["mnight", "月曜夜の日経"], ["slot", "決算後ドリフト"], ["disc", "裁量枠"]];
   const dayKey = (t) => new Date(t).toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
   function dailyPnl(f) { return f.daily_pnl || {}; }
   function shortYen(v) {
@@ -1021,12 +1021,12 @@ header>div{min-width:0} header .btn{padding:8px}
     ["total_all", "全体（GMO＋Saxo・入出金を除く）", "var(--text)"],
     ["gmo_copy", "GMOコピー", "var(--k-copy)"], ["gmo_basis_arb", "価格差", "var(--k-arb)"],
     ["saxo_copy_legacy", "旧Saxoコピー（11/3まで）", "var(--k-saxo)"], ["saxo_copy", "TQQQ・金の保有（11/3〜）", "var(--accent)"], ["saxo_nikkei_fade", "Saxo日経（確定＋含み）", "var(--k-nikkei)"],
-    ["saxo_usdjpy_fix", "Saxo仲値（確定＋含み）", "var(--k-fx)"], ["saxo_index_canary", "Saxo夜指数（確定＋含み）", "var(--k-trend2)"], ["saxo_usdjpy_breakout", "Saxoブレイク（確定＋含み）", "var(--k-fx)"], ["saxo_jp_200a_fade", "Saxo 200A（確定＋含み・11/13〜）", "var(--k-nikkei)"], ["saxo_jp_stocks", "Saxo日本株（Saxo確定・11/12〜）", "var(--k-saxo)"], ["saxo_us_crash_rebound", "SOXX急落反発（確定＋含み・11/23〜）", "var(--k-trend2)"], ["owner_discretionary", "裁量・例外枠（手動）", "var(--k-trend2)"],
+    ["saxo_usdjpy_fix", "Saxo仲値（確定＋含み）", "var(--k-fx)"], ["saxo_index_canary", "Saxo夜指数（確定＋含み）", "var(--k-trend2)"], ["saxo_usdjpy_breakout", "Saxoブレイク（確定＋含み）", "var(--k-fx)"], ["saxo_jp_200a_fade", "Saxo 200A（確定＋含み・11/13〜）", "var(--k-nikkei)"], ["saxo_jp_stocks", "Saxo日本株（Saxo確定・11/12〜）", "var(--k-saxo)"], ["saxo_us_crash_rebound", "SOXX急落反発（確定＋含み・11/23〜）", "var(--k-trend2)"], ["saxo_jp225_monday_night", "月曜夜の日経（確定・11/24〜）", "var(--k-nikkei)"], ["saxo_headroom_slot", "米IT決算後ドリフト（確定＋含み・11/27〜）", "var(--k-saxo)"], ["owner_discretionary", "裁量・例外枠（手動）", "var(--k-trend2)"],
     ["gmo_unallocated", "GMO未配賦差", "var(--muted)"], ["saxo_unallocated", "Saxo未配賦差", "var(--warn)"],
     ["gmo_trend_only", "トレンド主体（推定）", "var(--k-trend)"], ["gmo_trend_measured", "トレンド実測（10/7〜）", "var(--k-trend2)"],
     ["gmo_crypto_trend", "GMO口座全体（トレンド含む）", "var(--k-gmo)"],
   ];
-  const PNL_DEFAULT = ["total_all", "gmo_copy", "gmo_basis_arb", "saxo_copy_legacy", "saxo_copy", "gmo_unallocated", "saxo_unallocated", "saxo_nikkei_fade", "saxo_usdjpy_fix", "saxo_index_canary", "saxo_usdjpy_breakout", "saxo_jp_200a_fade", "saxo_jp_stocks", "saxo_us_crash_rebound", "owner_discretionary", "gmo_trend_measured"];
+  const PNL_DEFAULT = ["total_all", "gmo_copy", "gmo_basis_arb", "saxo_copy_legacy", "saxo_copy", "gmo_unallocated", "saxo_unallocated", "saxo_nikkei_fade", "saxo_usdjpy_fix", "saxo_index_canary", "saxo_usdjpy_breakout", "saxo_jp_200a_fade", "saxo_jp_stocks", "saxo_us_crash_rebound", "saxo_jp225_monday_night", "saxo_headroom_slot", "owner_discretionary", "gmo_trend_measured"];
   function pnlShown() {
     try {
       const v = JSON.parse(localStorage.getItem("pnlShown")), known = JSON.parse(localStorage.getItem("pnlKnown") || "null");
@@ -1591,7 +1591,7 @@ header>div{min-width:0} header .btn{padding:8px}
       ${open.length ? `<div class="chips">${open.map((o) => `<span class="chip">${o}</span>`).join("")}</div>` : ""}`;
   }
 
-  const LANE = { gmo_crypto_trend: ["暗号", "₿"], gmo_basis_arb: ["価格差", "⇄"], saxo_etf_trend: ["旧ETF口座", "S"], saxo_copy: ["TQQQ・金の保有", "S"], saxo_eurjpy_breakout: ["Saxoユーロ円", "B"], gmo_copy: ["GMOコピー", "⧉"], saxo_nikkei_fade: ["Saxo日経", "N"], saxo_usdjpy_fix: ["Saxo仲値", "¥"], saxo_index_canary: ["Saxo夜指数", "I"], saxo_usdjpy_breakout: ["Saxoブレイク", "B"], saxo_jp_200a_fade: ["Saxo 200A", "A"], saxo_jp_stocks: ["Saxo日本株", "J"], saxo_us_crash_rebound: ["SOXX反発", "R"], owner_discretionary: ["裁量枠", "M"] };
+  const LANE = { gmo_crypto_trend: ["暗号", "₿"], gmo_basis_arb: ["価格差", "⇄"], saxo_etf_trend: ["旧ETF口座", "S"], saxo_copy: ["TQQQ・金の保有", "S"], saxo_eurjpy_breakout: ["Saxoユーロ円", "B"], gmo_copy: ["GMOコピー", "⧉"], saxo_nikkei_fade: ["Saxo日経", "N"], saxo_usdjpy_fix: ["Saxo仲値", "¥"], saxo_index_canary: ["Saxo夜指数", "I"], saxo_usdjpy_breakout: ["Saxoブレイク", "B"], saxo_jp_200a_fade: ["Saxo 200A", "A"], saxo_jp_stocks: ["Saxo日本株", "J"], saxo_us_crash_rebound: ["SOXX反発", "R"], saxo_jp225_monday_night: ["月曜夜の日経", "N"], saxo_headroom_slot: ["決算後ドリフト", "P"], owner_discretionary: ["裁量枠", "M"] };
   function renderEvents(evs) {
     const list = evs.filter((e) => !evLane || e.lane === evLane).slice().reverse().slice(0, 60);
     $("events").innerHTML = list.map((e) => {
